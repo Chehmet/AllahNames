@@ -23,6 +23,9 @@ export const ar = name => `<bdi class="ar" dir="rtl" lang="ar">${esc(name.ar)}</
 export const displayName = name => esc(language ? name.latin : name.ru);
 export const alternateName = name => `<small lang="${language ? 'ru' : 'en'}">${esc(language ? name.ru : name.latin)}</small>`;
 export const secondary = values => `<p class="secondary-language" lang="${language ? 'ru' : 'en'}">${esc(values[1 - language])}</p>`;
+export const cueDisclosure = (name, open = false) => `<details class="cue-disclosure" ${open ? 'open' : ''}>
+  <summary>${t('Ассоциация для памяти', 'Memory cue')}</summary>
+  <p>${esc(name.cue[language])}</p>${secondary(name.cue)}</details>`;
 export const btn = (label, action, classes = '', attributes = '') =>
   `<button type="button" class="button ${classes}" data-action="${action}" ${attributes}>${label}</button>`;
 export const heading = (title, description = '') =>

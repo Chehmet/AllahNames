@@ -5,6 +5,7 @@ import { names, byId, groups, related, sourceLink } from '../docs/names.js';
 import { due, makeQuiz, nameFragment, schedule, shuffle } from '../docs/quiz.js';
 import { matrix } from '../docs/qr.js';
 import { gameCSV, invitation } from '../docs/rooms.js';
+import { verseExcerpt } from '../docs/verses.js';
 
 test('catalogue has 99 distinct names, complete bilingual cards and useful connections', () => {
   assert.equal(names.length, 99);
@@ -14,13 +15,32 @@ test('catalogue has 99 distinct names, complete bilingual cards and useful conne
     assert.match(name.ru, /\p{Script=Cyrillic}/u);
     assert.ok(groups[name.group]);
     for (const key of ['meaning', 'note', 'cue']) assert.ok(name[key].every(value => value?.length > 2));
+    name.variants.forEach((alternatives, index) => {
+      assert.equal(new Set(alternatives).size, alternatives.length);
+      assert.ok(alternatives.every(value => value !== name.meaning[index] && value?.length > 2));
+    });
     assert.ok(related(name).length >= 1);
     assert.ok(related(name).every(other => other && other !== name));
     for (const ref of name.refs) {
       assert.match(ref, /^(?:[=~]\d+:\d+|[hk]:(?:muslim|bukhari|abudawud):\d+[a-z]?)$/);
       assert.ok(sourceLink(ref).url.startsWith('https://'));
+      if (/^[=~]/.test(ref)) {
+        const quote = verseExcerpt(name, ref.slice(1));
+        assert.match(quote?.ar, /\p{Script=Arabic}/u, name.latin + ' ' + ref);
+        assert.ok(quote.meaning.every(value => value?.length > 2));
+      }
     }
   }
+});
+
+test('Ar-Rahim keeps Merciful as its main gloss and includes the expression from 33:43', () => {
+  const rahim = byId.get(3);
+  assert.equal(rahim.meaning[0], 'Милосердный');
+  assert.ok(rahim.variants[0].includes('Милующий'));
+  assert.deepEqual(verseExcerpt(rahim, '33:43'), {
+    ar: 'وَكَانَ بِالْمُؤْمِنِينَ رَحِيمًا',
+    meaning: ['Он милосерден к верующим.', 'He is merciful to the believers.']
+  });
 });
 
 test('quiz samples without replacement and 50/50 keeps the right answer at every difficulty', () => {

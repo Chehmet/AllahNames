@@ -1,8 +1,9 @@
 import { names, byId, groups, related, sourceLink } from './names.js';
 import { due, makeQuiz, nameFragment, schedule, shuffle } from './quiz.js';
+import { verseExcerpt } from './verses.js';
 import * as cloud from './cloud.js';
 import {
-  alternateName, ar, btn, displayName, empty, esc, heading, language, nameButton,
+  alternateName, ar, btn, cueDisclosure, displayName, empty, esc, heading, language, nameButton,
   opt, read, save, secondary, setLanguage, stat, t
 } from './ui.js';
 
@@ -12,6 +13,8 @@ const footer = document.querySelector('#footer');
 const dialog = document.querySelector('#dialog');
 const dialogBody = document.querySelector('#dialog-body');
 const toast = document.querySelector('#toast');
+const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+let chosenTheme = read('theme', null);
 let toastTimer;
 let detail;
 let email = '';
@@ -46,6 +49,22 @@ function notify(message) {
   toastTimer = setTimeout(() => { toast.hidden = true; }, 3500);
 }
 
+const isDark = () => chosenTheme ? chosenTheme === 'dark' : systemTheme.matches;
+function applyTheme() {
+  const dark = isDark();
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]').content =
+    getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  const button = topbar.querySelector('[data-action="theme"]');
+  if (button) {
+    const label = dark ? t('Включить светлую тему', 'Switch to light mode') : t('Включить тёмную тему', 'Switch to dark mode');
+    button.textContent = dark ? '☀' : '☾';
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  }
+}
+systemTheme.addEventListener('change', () => { if (!chosenTheme) applyTheme(); });
+
 function favoriteButton(name, compact = false) {
   const active = favorites().has(name.id);
   const text = active ? t('Убрать из избранного', 'Remove from favorites') : t('В избранное', 'Add to favorites');
@@ -73,18 +92,20 @@ function renderChrome() {
   topbar.innerHTML = `<a class="brand" href="#home"><span class="seal" aria-hidden="true">✧</span>${t('Асма', 'Asma')}</a>
     <nav class="nav" aria-label="${t('Разделы', 'Sections')}">${routes.slice(1).map(page =>
       `<a href="${url(page)}" ${page === route ? 'aria-current="page"' : ''}>${label(page)}</a>`).join('')}</nav>
-    <div class="tools"><button type="button" class="locale" data-action="language" aria-label="${t('Switch to English', 'Переключить на русский')}">${t('EN', 'RU')}</button>
+    <div class="tools"><button type="button" class="locale theme-toggle" data-action="theme"></button>
+    <button type="button" class="locale" data-action="language" aria-label="${t('Switch to English', 'Переключить на русский')}">${t('EN', 'RU')}</button>
     ${btn(cloud.account() ? t('Профиль', 'Account') : t('Войти', 'Sign in'), 'auth', 'outline small')}</div>`;
   footer.innerHTML = `<span>${t('Асма · Имена Аллаха', 'Asma · Names of Allah')}</span>${btn(t('Источники и перевод', 'Sources and translation'), 'sources', 'outline small')}`;
   document.title = t('Асма — имена Аллаха', 'Asma — Names of Allah');
   document.querySelector('.skip').textContent = t('К содержанию', 'Skip to content');
+  applyTheme();
 }
 
 function home() {
   const name = byId.get(2);
   const modes = [
     ['quiz', '◈', t('Случайные вопросы, три уровня и подсказки.', 'Random questions, three levels and hints.')],
-    ['cards', '▤', t('Вспомни смысл и переверни карточку.', 'Recall the meaning and flip the card.')],
+    ['cards', '▤', t('Читай значения и переворачивай карточки для разбора.', 'Read the meanings and flip cards for explanations.')],
     ['groups', '✧', t('Сравни близкие имена и их оттенки.', 'Compare related names and their nuances.')],
     ['room', '◎', t('Войди с телефона по QR и играй вместе.', 'Join from your phone by QR and play together.')]
   ];
@@ -110,11 +131,37 @@ function home() {
     ${stat(Object.keys(practice).length, t('Карточек в повторении', 'Cards in review'))}</div></section>` : ''}`;
 }
 
-function compareRow(name, cues = false) {
+function alternateGlosses(name) {
+  return name.variants[language].join(' · ');
+}
+
+function ayahCard(name, label, type = '=') {
+  const phrase = verseExcerpt(name, label);
+  if (!phrase) return '';
+  const source = sourceLink(type + label);
+  const kind = type === '~' ? t('Контекст', 'Context') : t('Выражение из аята', 'Quranic wording');
+  return `<article class="ayah">
+    <div class="ayah-meta"><span>${kind}</span>${sourceBadge(`${t('Коран', 'Quran')} ${label}`, source.url)}</div>
+    <p class="ar ayah-text" dir="rtl" lang="ar">${esc(phrase.ar)}</p>
+    <p>${esc(phrase.meaning[language])}</p>${secondary(phrase.meaning)}
+  </article>`;
+}
+
+function noteVerses(name) {
+  const mentioned = new Set([...name.note[language].matchAll(/\b(\d+):(\d+)(?:[–-](\d+))?/g)].flatMap(([, surah, first, last]) =>
+    last ? [`${surah}:${first}`, `${surah}:${last}`] : [`${surah}:${first}`]));
+  return name.refs.filter(ref => /^[=~]/.test(ref) && mentioned.has(ref.slice(1)))
+    .map(ref => ayahCard(name, ref.slice(1), ref[0])).join('');
+}
+
+function compareRow(name, study = false) {
+  const verses = study ? noteVerses(name) : '';
   return `<article class="comparison"><div class="compare-name">${nameButton(name, `${ar(name)} <span>${displayName(name)}</span>`)}
     ${alternateName(name)}<strong>${esc(name.meaning[language])}</strong></div>
+    ${alternateGlosses(name) ? `<p class="secondary-language">${esc(alternateGlosses(name))}</p>` : ''}
     <p>${esc(name.note[language])}</p>${secondary(name.note)}
-    ${cues ? `<p><strong>${t('Ассоциация', 'Memory cue')}</strong> · ${esc(name.cue[language])}</p>${secondary(name.cue)}` : ''}</article>`;
+    ${verses ? `<div class="verse-list">${verses}</div>` : ''}
+    ${study ? cueDisclosure(name) : ''}</article>`;
 }
 
 function groupPage() {
@@ -133,7 +180,7 @@ const normalize = value => value.toLowerCase().normalize('NFD').replace(/\p{M}/g
 function listNames() {
   const term = normalize(search.trim());
   const selected = names.filter(name => (!catalogGroup || catalogGroup === name.group)
-    && (!term || [name.ar, name.ru, name.latin, ...name.meaning].some(value => normalize(value).includes(term))));
+    && (!term || [name.ar, name.ru, name.latin, ...name.meaning, ...name.variants.flat()].some(value => normalize(value).includes(term))));
   return `<p class="subtitle" role="status">${t('Найдено', 'Found')} · ${selected.length}</p>${selected.length
     ? `<div class="names-grid">${selected.map(tile).join('')}</div>`
     : empty(t('По этому запросу ничего не найдено.', 'No names match your search.'))}`;
@@ -203,11 +250,12 @@ function quizPage() {
       ${stat(answers.filter(result => result.hints).length, t('Вопросов с подсказкой', 'Questions with a hint'))}</div>
       <div class="actions">${btn(t('Новый квиз', 'New quiz'), 'reset-quiz', 'primary')}${wrong.length
         ? btn(t('Повторить ошибки', 'Review missed names'), 'review-errors', 'outline') : ''}</div>
-      ${wrong.length ? `<div class="compare">${wrong.map(result => compareRow(byId.get(result.id))).join('')}</div>` : ''}</div></div>`;
+      ${wrong.length ? `<div class="compare">${wrong.map(result => compareRow(byId.get(result.id), true)).join('')}</div>` : ''}</div></div>`;
   }
   const question = questions[index];
   const name = byId.get(question.id);
   const reverse = question.mode === 'reverse';
+  const verses = picked ? noteVerses(name) : '';
   const similar = related(name)[0];
   const fragments = question.mode === 'name'
     ? `${Array.from(name.meaning[language]).slice(0, 3).join('')}…`
@@ -229,7 +277,10 @@ function quizPage() {
           ? `${ar(option)}${displayName(option)}` : esc(option.meaning[language])}</button>`;
     }).join('')}</div>
     ${picked ? `<div class="note" role="status"><strong>${picked === name.id ? t('Верно', 'Correct') : t('Правильный ответ', 'Correct answer')}
-      · ${nameButton(name)} · ${esc(name.meaning[language])}</strong><p>${esc(name.note[language])}</p></div>
+      · ${nameButton(name)} · ${esc(name.meaning[language])}</strong>
+      ${alternateGlosses(name) ? `<p class="secondary-language">${esc(alternateGlosses(name))}</p>` : ''}
+      <p>${esc(name.note[language])}</p></div>
+      ${verses ? `<div class="verse-list">${verses}</div>` : ''}${cueDisclosure(name, hints.has('cue'))}
       <div class="actions">${btn(index + 1 === questions.length ? t('К результатам', 'See results') : t('Следующий вопрос', 'Next question'), 'next-question', 'primary')}</div>`
       : `<div class="actions" aria-label="${t('Подсказки', 'Hints')}">${hintChoices.map(([id, text]) =>
         `<button type="button" class="button outline small" data-hint="${id}" aria-pressed="${hints.has(id)}" ${hints.has(id) ? 'disabled' : ''}>${text}</button>`).join('')}</div>
@@ -254,17 +305,25 @@ function cards() {
     ${empty(flash.pool === 'due' ? t('На сегодня всё повторено.', 'You are caught up on reviews.') : t('В этом наборе пока нет имён.', 'This set has no names yet.'))}
     </div></div>`;
   }
-  return `<div class="narrow">${heading(label('cards'), t('Вспомни значение, переверни карточку и отметь, удалось ли вспомнить.', 'Recall the meaning, flip the card and mark whether you remembered it.'))}
+  const meaning = esc(name.meaning[language]);
+  const glosses = esc(alternateGlosses(name));
+  const verses = noteVerses(name);
+  return `<div class="narrow">${heading(label('cards'), t('Значение видно сразу. Переверни карточку для пояснения и отметь, пора ли повторить имя.', 'Read the meaning, flip for an explanation and mark whether the name is due for review.'))}
     <div class="card stack"><div class="filters"><label>${t('Набор', 'Study set')}<select id="cards-pool">${selectPool().map(([id, text]) => opt(id, text, flash.pool)).join('')}</select></label>
     ${btn(t('Перемешать', 'Shuffle'), 'shuffle-cards', 'outline')}</div>
     <div><div class="countline"><span>${flash.index + 1} / ${flash.ids.length}</span><span>${t('К повторению', 'Due')} · ${pool('due').length}</span></div>${meter(flash.index + 1, flash.ids.length)}</div>
     <button type="button" class="flash ${flash.flipped ? 'flipped' : ''}" data-action="flip" aria-pressed="${flash.flipped}">
       <span class="flash-inner"><span class="flash-face" aria-hidden="${flash.flipped}">${ar(name)}<strong>${displayName(name)}</strong>
-        ${alternateName(name)}<small class="turn">${t('Нажми, чтобы перевернуть', 'Select to flip')}</small></span>
-      <span class="flash-face back" aria-hidden="${!flash.flipped}"><strong>${esc(name.meaning[language])}</strong>
-        <small>${esc(name.meaning[1 - language])}</small><span>${esc(name.cue[language])}</span></span></span>
+        ${alternateName(name)}<span class="flash-meaning">${meaning}</span>
+        ${glosses ? `<small>${glosses}</small>` : ''}
+        <small class="turn">${t('Переверни для пояснения', 'Flip for an explanation')}</small></span>
+      <span class="flash-face back" aria-hidden="${!flash.flipped}"><strong>${meaning}</strong>
+        <small>${esc(name.meaning[1 - language])}</small>${glosses ? `<small>${glosses}</small>` : ''}
+        <span class="flash-explanation">${esc(name.note[language])}</span></span></span>
     </button>
     <div class="actions"><span>${nameButton(name, t('Подробнее об имени', 'Name details'))}</span>${favoriteButton(name)}</div>
+    ${cueDisclosure(name)}
+    ${verses ? `<div id="flash-verses" class="verse-list" ${flash.flipped ? '' : 'hidden'}>${verses}</div>` : ''}
     <div class="actions" id="ratings" ${flash.flipped ? '' : 'hidden'}>
       ${btn(t('Нужно повторить', 'Review again'), 'again', 'outline', flash.rated.has(name.id) ? 'disabled' : '')}
       ${btn(t('Вспомнила', 'I remembered'), 'remember', 'primary', flash.rated.has(name.id) ? 'disabled' : '')}</div>
@@ -287,19 +346,22 @@ function showDialog(content) {
 function showName(name) {
   detail = name;
   const sourceTypes = {
-    '=': t('Коран, имя или эпитет', 'Quran, name or epithet'),
-    '~': t('Коран, контекст', 'Quran, context'),
     h: t('Хадис', 'Hadith'),
     k: t('Хадис, контекст', 'Hadith, context')
   };
+  const verses = name.refs.filter(ref => /^[=~]/.test(ref)).map(ref => ayahCard(name, ref.slice(1), ref[0])).join('');
+  const alternatives = [name.variants[0].join(' · '), name.variants[1].join(' · ')];
   showDialog(`<div class="stack"><div class="detail-heading">${ar(name)}
     <h2 id="dialog-title" tabindex="-1">${displayName(name)}</h2>${alternateName(name)}</div>
-    <div><h3>${esc(name.meaning[language])}</h3>${secondary(name.meaning)}</div>
+    <div><h3>${esc(name.meaning[language])}</h3>${secondary(name.meaning)}
+    ${alternatives[language] ? `<p class="meaning-variants">${t('Также', 'Also')} · ${esc(alternatives[language])}</p>` : ''}
+    ${alternatives[1 - language] ? secondary(alternatives) : ''}</div>
     <div><p>${esc(name.note[language])}</p>${secondary(name.note)}</div>
-    <div class="note"><strong>${t('Ассоциация для памяти', 'Memory cue')}</strong><p>${esc(name.cue[language])}</p>${secondary(name.cue)}</div>
+    ${cueDisclosure(name)}
     <div class="actions">${favoriteButton(name)}</div>
-    <div><h3>${t('Источники', 'Sources')}</h3>
-    <div class="source-list" style="margin-top: 8px">${name.refs.map(ref => {
+    <div class="stack"><h3>${t('Источники', 'Sources')}</h3>
+    ${verses ? `<div class="verse-list">${verses}</div>` : ''}
+    <div class="source-list">${name.refs.filter(ref => /^[hk]:/.test(ref)).map(ref => {
       const source = sourceLink(ref);
       return sourceBadge(`${sourceTypes[source.type]} · ${source.label}`, source.url);
     }).join('')}${sourceBadge(t('Перечень ат-Тирмизи · 3507', 'At-Tirmidhi’s list · 3507'), traditional)}</div>
@@ -313,9 +375,9 @@ function sources() {
   detail = undefined;
   showDialog(`<div class="stack"><h2 id="dialog-title" tabindex="-1">${t('Источники и перевод', 'Sources and translation')}</h2>
     <p>${t('Коран призывает обращаться к Аллаху Его прекрасными именами (7:180). Достоверный хадис аль-Бухари 2736 сообщает о 99 именах без их перечисления. Учебный каталог следует известному перечню из ат-Тирмизи 3507. Ат-Тирмизи назвал передачу с перечнем редкой (гариб), а Ибн Хаджар считал перечисление вставкой передатчика.', 'The Quran calls on people to invoke Allah by His beautiful names (7:180). The authentic hadith in Al-Bukhari 2736 mentions 99 names without enumerating them. The catalogue follows the familiar list in At-Tirmidhi 3507. At-Tirmidhi called the narration with the list rare (gharib), and Ibn Hajar regarded the enumeration as a narrator’s insertion.')}</p>
+    ${ayahCard(null, '7:180')}
     <p>${t('Карточки помечают прямые именования и ссылки на близкие выражения или действия. Русские и английские формулировки передают учебный смысл. Для близких имён оттенки могут пересекаться. Ассоциации помогают запомнить слова.', 'Cards mark direct epithets and distinguish references to related expressions or actions. Russian and English renderings summarize the meaning for study. Nuances can overlap between related names. Memory cues help recall the words.')}</p>
     <div class="source-list">
-    ${sourceBadge(t('Коран 7:180', 'Quran 7:180'), 'https://quran.com/7/180')}
     ${sourceBadge(t('Коран 59:22–24', 'Quran 59:22–24'), 'https://quran.com/59/22-24')}
     ${sourceBadge(t('Аль-Бухари 2736', 'Al-Bukhari 2736'), 'https://sunnah.com/bukhari:2736')}
     ${sourceBadge(t('Ат-Тирмизи 3507', 'At-Tirmidhi 3507'), traditional)}
@@ -465,6 +527,8 @@ function flashAction(action) {
     card.querySelector('.flash-face').setAttribute('aria-hidden', flash.flipped);
     card.querySelector('.back').setAttribute('aria-hidden', !flash.flipped);
     main.querySelector('#ratings').hidden = !flash.flipped;
+    const verses = main.querySelector('#flash-verses');
+    if (verses) verses.hidden = !flash.flipped;
     return;
   }
   if (action === 'again' || action === 'remember') {
@@ -528,11 +592,16 @@ document.addEventListener('click', event => {
   }
   const action = button.dataset.action;
   switch (action) {
+    case 'theme':
+      chosenTheme = isDark() ? 'light' : 'dark';
+      save('theme', chosenTheme);
+      applyTheme();
+      break;
     case 'language':
       setLanguage(1 - language);
       renderChrome();
       render();
-      topbar.querySelector('.locale').focus();
+      topbar.querySelector('[data-action="language"]').focus();
       break;
     case 'auth': auth(); break;
     case 'sources': sources(); break;

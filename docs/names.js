@@ -2,8 +2,8 @@
 // = Quranic epithet, ~ Quranic context, h hadith epithet, k hadith context, - traditional list only.
 const rows = `
 one|اللَّه|Аллах|Allah|Аллах, Единый Бог|Allah, the One God|Собственное имя Бога, Которому принадлежит поклонение и все прекрасные имена.|The proper name of God, to whom worship and all the beautiful names belong.|Начало формулы «Ля иляха илля-Ллах».|The declaration “Lā ilāha illā Allāh”.|=20:14,=17:110
-mercy|الرَّحْمَٰن|Ар-Рахман|Ar-Rahman|Всемилостивый|The All-Merciful|Одна из распространённых трактовок подчёркивает всеохватность милости Аллаха. Имя стоит рядом с Ар-Рахим в начале «Аль-Фатихи».|A common reading emphasizes the vast reach of Allah’s mercy. The name stands beside Ar-Rahim in the opening surah.|Дождь, который орошает целую долину. Вспомни широту милости.|Rain reaching an entire valley. Recall the breadth of mercy.|=1:3,=59:22
-mercy|الرَّحِيم|Ар-Рахим|Ar-Rahim|Милующий|The Ever-Merciful|Имя из того же корня, что Ар-Рахман. Здесь запоминаем проявление милости к тем, кого Аллах милует. В 33:43 особо упомянуты верующие.|From the same root as Ar-Rahman. Recall mercy reaching its recipients. Believers are mentioned specifically in 33:43.|Дождь падает на конкретное семя и помогает ему прорасти.|Rain reaches one seed and helps it grow.|=1:3,=33:43
+mercy|الرَّحْمَٰن|Ар-Рахман|Ar-Rahman|Всемилостивый|The All-Merciful|Ар-Рахман и Ар-Рахим происходят от одного корня «р-х-м», связанного с милостью. В распространённом толковании Ар-Рахман подчёркивает широту милости, охватывающей творение. В 1:3 и 59:22 оба имени стоят рядом.|Ar-Rahman and Ar-Rahim share the root r-ḥ-m, which conveys mercy. A common interpretation sees Ar-Rahman as emphasizing the vast reach of mercy across creation. The names stand together in 1:3 and 59:22.|Дождь, который орошает целую долину. Вспомни широту милости.|Rain reaching an entire valley. Recall the breadth of mercy.|=1:3,=59:22
+mercy|الرَّحِيم|Ар-Рахим|Ar-Rahim|Милосердный|The Ever-Merciful|«Милосердный» — распространённая передача имени Ар-Рахим. В толкованиях рядом с Ар-Рахманом это имя связывают с проявлением милости к тем, кому она даруется. В 33:43 отдельно сказано о милосердии к верующим.|Ar-Rahim means “the Merciful.” In interpretations that compare it with Ar-Rahman, it is associated with mercy reaching its recipients. Verse 33:43 specifically speaks of mercy to believers.|Дождь падает на конкретное семя и помогает ему прорасти.|Rain reaches one seed and helps it grow.|=1:3,=33:43,=59:22
 rule|الْمَلِك|Аль-Малик|Al-Malik|Царь|The Sovereign King|Указывает на полную верховную власть. Маликуль-Мульк подчёркивает также, что сама власть принадлежит Ему и Он ею распоряжается.|Emphasizes supreme kingship. Malik al-Mulk also emphasizes ownership and disposal of all dominion.|Слово «царь» на карточке рядом со словом «власть».|A flashcard pairing “king” with “authority”.|=59:23,=20:114
 holy|الْقُدُّوس|Аль-Куддус|Al-Quddus|Пресвятой|The All-Holy|Указывает на совершенную святость и непричастность Аллаха к недостаткам. Ас-Салям связывают также с миром и безопасностью.|Affirms perfect holiness and freedom from every defect. As-Salam also carries the sense of peace and safety.|Корень «к-д-с» напоминает слово «священный».|Remember the q-d-s root through the word “sacred”.|=59:23,=62:1
 holy|السَّلَام|Ас-Салям|As-Salam|Совершенный, Дарующий мир|The Flawless, the Giver of Peace|Имя связано с миром, благополучием и свободой от изъяна. Аль-Му’мин в соседнем аяте связывают с дарованием безопасности.|The name conveys peace, well-being and freedom from defect. Al-Mu’min in the same verse is associated with granting security.|«Ас-саляму алейкум» напоминает о мире.|“As-salāmu ʿalaykum” brings peace to mind.|=59:23
@@ -37,7 +37,7 @@ restraint|الْحَلِيم|Аль-Халим|Al-Halim|Кроткий, Не с�
 majesty|الْعَظِيم|Аль-Азым|Al-‘Azim|Величайший|The Magnificent|Подчёркивает глубину и непревзойдённость величия. Аль-Алий в паре 2:255 напоминает о возвышенности.|Emphasizes unsurpassed magnificence. Al-‘Aliyy, paired with it in 2:255, calls to mind exaltedness.|Вспомни последние два имени в аяте 2:255. Здесь опора на «величие».|Recall the last two names in 2:255. Here the cue is “magnificence”.|=2:255,=42:4
 forgive|الْغَفُور|Аль-Гафур|Al-Ghafur|Много Прощающий|The Abundantly Forgiving|Как и Аль-Гаффар, связано с прощением и сокрытием греха. Учебный акцент здесь на обилии прощения, у Аль-Гаффара — на повторяемости.|Like Al-Ghaffar, it relates to forgiveness and covering sins. The study emphasis here is abundance, and with Al-Ghaffar it is repetition.|Вспомни призыв 39:53 не отчаиваться в милости.|Recall the call in 39:53 to keep hope in Allah’s mercy.|=39:53,=67:2
 grace|الشَّكُور|Аш-Шакур|Ash-Shakur|Щедро Воздающий за добро|The Appreciative|Указывает, что Аллах принимает добрые дела и даёт за них щедрое воздаяние. Аль-Хамид указывает на достойность хвалы Самого Аллаха.|Allah accepts good deeds and rewards them generously. Al-Hamid points to Allah’s own worthiness of praise.|Малое добро, за которым следует большая награда.|A small good deed followed by generous reward.|=35:30,=64:17
-height|الْعَلِيّ|Аль-Алий|Al-‘Aliyy|Всевышний|The Most High|Выражает высочайшую возвышенность Аллаха. Аль-Кабир в 13:9 подчёркивает величие, Аль-Мута‘али там же — превознесённость.|Expresses Allah’s supreme exaltedness. Al-Kabir in 13:9 stresses greatness, and Al-Muta‘ali there stresses being exalted above all.|Слово «высота» как напоминание о возвышенности.|Use “height” as a cue for exaltedness.|=2:255,=42:4
+height|الْعَلِيّ|Аль-Алий|Al-‘Aliyy|Всевышний|The Most High|Выражает высочайшую возвышенность Аллаха. Аль-Кабир в 13:9 подчёркивает величие, Аль-Мута‘али там же — превознесённость.|Expresses Allah’s supreme exaltedness. Al-Kabir in 13:9 stresses greatness, and Al-Muta‘ali there stresses being exalted above all.|Слово «высота» как напоминание о возвышенности.|Use “height” as a cue for exaltedness.|=2:255,=42:4,~13:9
 majesty|الْكَبِير|Аль-Кабир|Al-Kabir|Великий|The Great|Выражает величие Аллаха. Аль-Джалиль напоминает о величии, вызывающем благоговение, а Аль-Мутакаббир — об исключительности этого величия.|Expresses Allah’s greatness. Al-Jalil recalls majesty that inspires reverence, and Al-Mutakabbir stresses its unique belonging to Him.|«Кабир» запомни через простое слово «великий».|Associate “kabīr” with the plain word “great”.|=13:9,=22:62
 care|الْحَفِيظ|Аль-Хафиз|Al-Hafiz|Хранящий|The Preserver|Подчёркивает сохранение и охрану. Аль-Вакиль подчёркивает доверие тому, кому вверяют свои дела.|Emphasizes preservation and protection. Al-Wakil emphasizes trust when entrusting one’s affairs.|Сбережённое письмо. Вспомни «хранить».|A carefully preserved letter. Recall “preserve”.|=11:57,=34:21
 gifts|الْمُقِيت|Аль-Мукыт|Al-Muqit|Поддерживающий и Питающий|The Sustainer|В толкованиях встречаются смыслы поддержания, надзора и власти. Для различения с Ар-Раззаком запоминаем поддержание жизни.|Explanations include sustenance, oversight and power. To distinguish it from Ar-Razzaq, recall the sustaining of life.|Еда, поддерживающая силы день за днём.|Food that sustains strength day after day.|=4:85
@@ -96,7 +96,7 @@ giving|النَّافِع|Ан-Нафи‘|An-Nafi‘|Дарующий поль�
 near|النُّور|Ан-Нур|An-Nur|Свет|The Light|В 24:35 Аллах назван Светом небес и земли. В толкованиях встречается связь с озарением и руководством. Аль-Хади выделяет сам путь и руководство по нему.|In 24:35 Allah is called the Light of the heavens and earth. Interpretations often connect this with illumination and guidance. Al-Hadi stresses guidance on the path.|Озарённая дорога напоминает о понятности пути.|A lit path reminds you that the way can become clear.|=24:35
 near|الْهَادِي|Аль-Хади|Al-Hadi|Ведущий верным путём|The Guide|Подчёркивает, что Аллах направляет к истине. У Ар-Рашида из традиционного списка смыслы близки. В нём слышится корень «р-ш-д» о верном направлении.|Emphasizes Allah guiding to truth. The traditional Ar-Rashid overlaps in meaning, with the root r-sh-d recalling right direction.|Указатель на верную дорогу.|A sign marking the right way.|=25:31,=22:54
 creation|الْبَدِيع|Аль-Бади‘|Al-Badi‘|Создатель без образца|The Originator without Precedent|В 2:117 и 6:101 говорится о Создателе небес и земли. Смысл выделяет творение без предшествующего образца. Аль-Бари подчёркивает выведение в бытие.|In 2:117 and 6:101 it refers to the Originator of the heavens and earth. It stresses creation without a prior model. Al-Bari emphasizes bringing into being.|Пустой лист. Вспомни выражение «без образца».|A blank sheet. Recall “without a prior model”.|=2:117,=6:101
-eternal|الْبَاقِي|Аль-Бакы|Al-Baqi|Непреходящий|The Ever-Remaining|Традиционное имя подчёркивает пребывание, когда творение преходит. В 55:26–27 употреблён связанный глагол. Аль-Ахыр подчёркивает, что после Аллаха ничего нет.|The traditional name stresses enduring as created things pass away. A related verb occurs in 55:26–27. Al-Akhir emphasizes that nothing is after Allah.|Вспомни противопоставление преходящего и остающегося в 55:26–27.|Recall what passes away and what remains in 55:26–27.|~55:27
+eternal|الْبَاقِي|Аль-Бакы|Al-Baqi|Непреходящий|The Ever-Remaining|Традиционное имя подчёркивает пребывание, когда творение преходит. В 55:26–27 употреблён связанный глагол. Аль-Ахыр подчёркивает, что после Аллаха ничего нет.|The traditional name stresses enduring as created things pass away. A related verb occurs in 55:26–27. Al-Akhir emphasizes that nothing is after Allah.|Вспомни связь между преходящим и остающимся в 55:26–27.|Recall what passes away and what remains in 55:26–27.|~55:26,~55:27
 rule|الْوَارِث|Аль-Варис|Al-Warith|Наследующий всё|The Inheritor|Всё возвращается к Аллаху, когда владение творений заканчивается. В 15:23 использована форма множественного числа. Аль-Бакы подчёркивает непреходящее пребывание.|All returns to Allah when created ownership ends. 15:23 uses a plural form. Al-Baqi emphasizes enduring permanence.|Земное владение заканчивается. Вспомни, Кому принадлежит итог.|Earthly ownership ends. Recall to whom all ultimately belongs.|~15:23,~19:40
 near|الرَّشِيد|Ар-Рашид|Ar-Rashid|Направляющий к верному решению|The Director to Right Guidance|Традиционное имя связывают с верным направлением и мудрым устроением. Аль-Хади прямо передаёт руководство. В 18:10 употреблено родственное слово о верном исходе.|The traditional name is associated with right direction and wise ordering. Al-Hadi directly denotes guiding. A related word for a right course occurs in 18:10.|Вспомни «рушд» — верное направление.|Recall rushd, right direction.|~18:10
 restraint|الصَّبُور|Ас-Сабур|As-Sabur|Долготерпеливый|The Most Patient|Традиционная форма. Достоверный хадис описывает терпение Аллаха к тому, что Он слышит от людей. Аль-Халим особенно выделяет сдержанность в наказании.|A traditional form. An authentic hadith describes Allah’s patience with what He hears from people. Al-Halim especially stresses restraint in punishment.|Вспомни слово «сабр» и течение времени.|Recall ṣabr and the passage of time.|k:bukhari:6099
@@ -139,11 +139,89 @@ const crossLinks = [
   [74, 97], [75, 78], [79, 3], [87, 60], [90, 17], [96, 97]
 ];
 
+// Short study glosses. A single primary gloss keeps each quiz choice unambiguous.
+const variants = {
+  2: [['Милостивый', 'Безгранично Милостивый'], ['The Most Compassionate']],
+  3: [['Милующий', 'Оказывающий милость'], ['The Merciful', 'The One Who Shows Mercy']],
+  4: [['Владыка'], ['The King', 'The Sovereign']],
+  5: [['Всесвятой'], ['The Holy']],
+  6: [['Источник мира'], ['The Source of Peace']],
+  7: [['Дарующий защищённость'], ['The Granter of Security']],
+  8: [['Блюститель', 'Объемлющий надзором'], ['The Overseer']],
+  9: [['Могущественный', 'Непреодолимый'], ['The Mighty', 'The Invincible']],
+  12: [['Создатель'], ['The Maker']],
+  13: [['Выводящий творение к существованию'], ['The Originator']],
+  14: [['Придающий форму'], ['The Shaper']],
+  15: [['Снова и снова Прощающий'], ['The Oft-Pardoning']],
+  16: [['Покоряющий всё'], ['The Subduer of All']],
+  17: [['Даритель благ'], ['The Giver of Gifts']],
+  18: [['Наделяющий пропитанием'], ['The Sustainer of Creation']],
+  19: [['Открывающий пути', 'Разрешающий споры'], ['The Opener', 'The Decider']],
+  20: [['Знающий всё'], ['The Knower of All']],
+  21: [['Удерживающий'], ['The One Who Withholds']],
+  22: [['Дающий простор'], ['The One Who Expands']],
+  25: [['Воздающий почёт'], ['The One Who Grants Dignity']],
+  26: [['Унижающий'], ['The One Who Brings Low']],
+  27: [['Слышащий всё'], ['The One Who Hears All']],
+  28: [['Видящий всё'], ['The One Who Sees All']],
+  29: [['Решающий по праву'], ['The Judge']],
+  31: [['Знающий тончайшее', 'Благосклонный'], ['The Subtle', 'The Gentle']],
+  32: [['Сведущий обо всём'], ['The Fully Aware']],
+  33: [['Снисходительный'], ['The Clement']],
+  34: [['Обладающий наивысшим величием'], ['The Tremendous']],
+  35: [['Многопрощающий'], ['The Oft-Forgiving']],
+  36: [['Щедро Награждающий за добро'], ['The Rewarder of Good']],
+  37: [['Высочайший'], ['The Exalted']],
+  39: [['Оберегающий', 'Сохраняющий'], ['The Protector']],
+  40: [['Дарующий питание', 'Поддерживающий жизнь'], ['The Nourisher']],
+  41: [['Подводящий расчёт', 'Достаточный как опора'], ['The One Who Takes Account', 'The Sufficient']],
+  43: [['Благородный'], ['The Noble']],
+  44: [['Бдительный'], ['The Watcher']],
+  45: [['Откликающийся на просьбы'], ['The Responsive']],
+  46: [['Необъятный'], ['The Vast']],
+  48: [['Полный любви'], ['The Most Loving']],
+  50: [['Поднимающий из могил'], ['The Resurrector']],
+  52: [['Истина'], ['The True']],
+  53: [['Тот, на Кого уповают'], ['The One Entrusted with Affairs']],
+  54: [['Обладающий совершенной силой'], ['The Strong']],
+  56: [['Покровитель и Помощник'], ['The Patron']],
+  57: [['Всехвальный'], ['The One Worthy of Praise']],
+  59: [['Дающий начало творению'], ['The One Who Begins Creation']],
+  61: [['Дарующий жизнь'], ['The One Who Gives Life']],
+  62: [['Тот, Кто забирает жизнь'], ['The One Who Causes Death']],
+  63: [['Живой, Который не умирает'], ['The Living']],
+  64: [['Тот, на Ком держится всё сущее'], ['The Sustainer of All']],
+  68: [['Тот, к Кому обращаются со всеми нуждами'], ['The One on Whom All Depend']],
+  69: [['Всемогущий'], ['The Able']],
+  70: [['Обладающий всей полнотой могущества'], ['The Omnipotent']],
+  71: [['Предваряющий', 'Приближающий'], ['The One Who Brings Forward']],
+  72: [['Откладывающий'], ['The One Who Sets Back']],
+  75: [['Явный', 'Превыше всего'], ['The Manifest', 'The Ascendant']],
+  76: [['Скрытый', 'Сокровенный'], ['The Hidden', 'The Inward']],
+  79: [['Дарующий добро', 'Благостный'], ['The Beneficent']],
+  80: [['Принимающий обращение с покаянием'], ['The One Who Accepts Repentance']],
+  82: [['Милующий и Прощающий', 'Помилующий'], ['The One Who Effaces Sins']],
+  83: [['Сострадательный', 'Кротко Милующий'], ['The Compassionate', 'The Most Kind']],
+  84: [['Владыка царства'], ['The Master of Sovereignty']],
+  85: [['Обладатель величия и почёта'], ['Possessor of Majesty and Honor']],
+  86: [['Действующий по справедливости'], ['The One Who Deals Justly']],
+  87: [['Объединяющий', 'Собирающий воедино'], ['The One Who Gathers']],
+  88: [['Самодостаточный', 'Свободный от нужды'], ['The One Free of Need']],
+  89: [['Обогащающий', 'Наделяющий достатком'], ['The One Who Grants Sufficiency']],
+  90: [['Препятствующий'], ['The Preventer']],
+  94: [['Наставляющий', 'Ведущий прямым путём'], ['The One Who Guides']],
+  95: [['Творящий без предшествующего образца'], ['The Incomparable Originator']],
+  96: [['Пребывающий вечно'], ['The Everlasting']],
+  97: [['Тот, Кому всё возвращается'], ['The Ultimate Inheritor']],
+  99: [['Терпеливый'], ['The Patient']]
+};
+
 export const names = rows.trim().split('\n').map((row, index) => {
   const [group, ar, ru, latin, ruMeaning, enMeaning, ruNote, enNote, ruCue, enCue, refs] = row.split('|');
   return {
     id: index + 1, group, ar, ru, latin,
     meaning: [ruMeaning, enMeaning], note: [ruNote, enNote], cue: [ruCue, enCue],
+    variants: variants[index + 1] || [[], []],
     refs: refs === '-' ? [] : refs.split(',')
   };
 });

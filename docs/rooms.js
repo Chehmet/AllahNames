@@ -1,7 +1,7 @@
 import { byId, names } from './names.js';
 import { makeQuiz } from './quiz.js';
 import * as cloud from './cloud.js';
-import { alternateName, ar, btn, displayName, empty, esc, heading, language, nameButton, opt, read, save, stat, t } from './ui.js';
+import { alternateName, ar, btn, cueDisclosure, displayName, empty, esc, heading, language, nameButton, opt, read, save, stat, t } from './ui.js';
 
 const validCode = value => /^[A-F0-9]{8}$/.test(value || '');
 const inviteCode = () => (new URL(location.href).searchParams.get('room') || '').trim().toUpperCase();
@@ -35,7 +35,7 @@ function distribution(result, count) {
     </tr></thead><tbody>
     ${result.options.map(option => `<tr><td>${answerText(option.id, result.mode)} ${option.id === result.id ? `<strong class="tag-correct">· ${t('верно', 'correct')}</strong>` : ''}</td>
       <td>${option.count}</td><td>${replied ? Math.round(100 * option.count / replied) : 0}%</td></tr>`).join('')}
-    </tbody></table></div></article>`;
+    </tbody></table></div>${cueDisclosure(name)}</article>`;
 }
 
 function standings(game) {
