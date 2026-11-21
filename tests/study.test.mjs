@@ -4,7 +4,7 @@ import jsQR from 'jsqr';
 import { names, byId, groups, related, sourceLink } from '../docs/names.js';
 import { due, makeQuiz, nameFragment, schedule, shuffle } from '../docs/quiz.js';
 import { matrix } from '../docs/qr.js';
-import { gameCSV, invitation } from '../docs/rooms.js';
+import { gameCSV, invitation, roomErrorMessage } from '../docs/rooms.js';
 import { verseExcerpt } from '../docs/verses.js';
 
 test('catalogue has 99 distinct names, complete bilingual cards and useful connections', () => {
@@ -41,6 +41,12 @@ test('Ar-Rahim keeps Merciful as its main gloss and includes the expression from
     ar: 'وَكَانَ بِالْمُؤْمِنِينَ رَحِيمًا',
     meaning: ['Он милосерден к верующим.', 'He is merciful to the believers.']
   });
+});
+
+test('room errors name the Supabase setting when guest sign-in is disabled', () => {
+  const error = { code: 'anonymous_provider_disabled', message: 'Anonymous sign-ins are disabled' };
+  assert.match(roomErrorMessage(error), /Гостевой вход выключен.*Allow anonymous sign-ins/);
+  assert.match(roomErrorMessage({ message: 'nickname_taken' }), /Это имя уже занято/);
 });
 
 test('quiz samples without replacement and 50/50 keeps the right answer at every difficulty', () => {

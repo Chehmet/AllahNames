@@ -62,7 +62,13 @@ const labels = () => ({
   room_limit: t('Достигнут лимит открытых комнат. Заверши одну из игр.', 'You have reached the open-room limit. Finish one of your games.'),
   room_full: t('В комнате уже 60 игроков.', 'This room already has 60 players.')
 });
-const message = error => labels()[error.message] || t('Не удалось связаться с сервером. Попробуй ещё раз.', 'Could not reach the server. Please try again.');
+export function roomErrorMessage(error) {
+  if (error.code === 'anonymous_provider_disabled') {
+    return t('Гостевой вход выключен. Включите Allow anonymous sign-ins в настройках Supabase проекта.',
+      'Guest sign-in is disabled. Enable Allow anonymous sign-ins in the project’s Supabase settings.');
+  }
+  return labels()[error.message] || t('Не удалось связаться с сервером. Попробуй ещё раз.', 'Could not reach the server. Please try again.');
+}
 
 export function gameCSV(rows) {
   const cell = value => {
@@ -193,7 +199,7 @@ export function createRoom(main, { auth, notify }) {
       render();
     } catch (error) {
       if (version !== generation || working) return;
-      issue = message(error);
+      issue = roomErrorMessage(error);
       if (error.message === 'room_unavailable' || error.message === 'Sign in required') reset(false);
       render();
     } finally {
@@ -221,7 +227,7 @@ export function createRoom(main, { auth, notify }) {
     clearPoll();
     render();
     try { await task(); }
-    catch (error) { issue = message(error); }
+    catch (error) { issue = roomErrorMessage(error); }
     finally {
       working = false;
       render();
