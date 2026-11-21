@@ -1,54 +1,33 @@
-# Асма · Имена Аллаха
+# Asma · 99 Names of Allah
 
-Двуязычный учебный сайт на HTML, CSS и JavaScript со светлой и тёмной темой. В каталоге 99 имён с арабским написанием, кириллицей, латинской транслитерацией, вариантами перевода и выражениями из аятов. Квиз перемешивает вопросы и варианты ответа. Значение видно на карточке сразу, а ассоциацию можно открыть по желанию. На обратной стороне карточки есть пояснение.
+Asma is a bilingual web app for learning the 99 Names of Allah (*Al-Asma al-Husna*). Study the meanings in Russian or English, practice with quizzes and flashcards, and compare names that are easy to confuse.
 
-## Опубликовать на GitHub Pages
+**[Open the app](https://chehmet.github.io/AllahNames/)**
 
-1. Создай новый публичный репозиторий, например `asma-quiz`.
-2. Загрузи **содержимое** папки проекта в корень репозитория. В репозитории должны быть видны `docs/` и `README.md`. Если пользуешься ZIP, сначала распакуй его.
-3. В репозитории открой **Settings → Pages**. Выбери **Deploy from a branch**, ветку **main** и папку **/docs**. Нажми **Save**.
-4. Открой опубликованный адрес вида `https://ТВОЙ-ЛОГИН.github.io/asma-quiz/`. Публикация может занять несколько минут.
+## Study modes
 
-Сольный квиз, карточки, каталог, группы и локальное избранное готовы к работе сразу после публикации. [Инструкция GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+- **Catalogue.** Browse all 99 names in Arabic, with Cyrillic and Latin transliterations, plain-language meanings, optional memory cues, and linked sources. Quran references include Arabic excerpts and study translations.
+- **Quizzes.** Choose a difficulty and question count. Questions and answer options are shuffled. Use hints such as 50/50 or a letter fragment, and review missed names at the end.
+- **Flashcards.** See the meaning at a glance, flip the card for an explanation, and schedule your next review.
+- **Meaning groups.** Compare related names side by side. For example, the mercy group explores how *Ar-Rahman* and *Ar-Rahim* share a root and differ in emphasis.
+- **Favorites and themes.** Save names for later and switch between light and dark mode. Solo progress and review schedules are stored in your browser.
 
-## Включить вход и общую игру
+## Group quizzes
 
-GitHub Pages отдаёт интерфейс. Supabase отправляет ссылки для входа, хранит облачное избранное и синхронизирует комнаты.
+With Supabase configured, a host signs in by email and creates a room. Players join from their phones using a QR code or room code and a nickname. The host advances the quiz and can review answer distributions, view the leaderboard, and download a CSV with each player's answers. Signing in also enables favorites sync across devices.
 
-1. Создай проект Supabase. В **SQL Editor** выполни содержимое [supabase/schema.sql](supabase/schema.sql). Если Data API в проекте выключен, включи его для схемы `public`. Схема `asma_private` остаётся закрытой, а сайт вызывает только функции `aq_*`.
-2. В **Authentication → Sign In / Providers** включи провайдер **Email**, регистрацию новых пользователей и **Anonymous sign-ins** для игроков без аккаунта. В **Authentication → URL Configuration** укажи полный адрес GitHub Pages в поле **Site URL**. [Настройки входа](https://supabase.com/docs/guides/auth/general-configuration)
-3. В [docs/config.js](docs/config.js) укажи **Project URL** из **Integrations → Data API** и **Publishable key** (`sb_publishable_…`) из **Settings → API Keys**. Если URL показан с окончанием `/rest/v1`, используй часть до него. Закоммить этот файл вместе с публичным URL и ключом, чтобы GitHub Pages мог отдать настройки браузеру. Храни секретные ключи, `service_role` и пароли вне репозитория. [URL Data API](https://supabase.com/docs/guides/api), [ключи Supabase](https://supabase.com/docs/guides/getting-started/api-keys)
-4. Загрузи обновлённый `docs/config.js` в репозиторий. На опубликованном сайте выбери **Войти → Получить письмо**. Для встроенной отправки используй адрес из команды проекта Supabase. Открой ссылку в том же браузере, где запросила письмо, и создай пробную комнату. На втором телефоне открой QR камерой или введи восьмизначный код комнаты вручную. [Вход по ссылке](https://supabase.com/docs/guides/auth/auth-email-passwordless)
+## Run locally
 
-На новых проектах Free со встроенной отправкой для входа подходят стандартные шаблоны писем. Для отправки писем пользователям вне команды проекта подключи свой SMTP. При настроенном шаблоне с `{{ .Token }}` в форме также можно ввести код. Если у группы общий Wi‑Fi, проверь лимит анонимных входов с одного IP. [Ограничения шаблонов](https://supabase.com/changelog/46599-changes-to-email-template-customisation-on-free-tier), [настройка SMTP](https://supabase.com/docs/guides/auth/auth-smtp), [лимиты Auth](https://supabase.com/docs/guides/auth/rate-limits)
+The frontend uses HTML, CSS, and vanilla JavaScript. GitHub Pages serves the [`docs/`](docs/) directory directly. Solo study works without an account or a backend.
 
-Ведущий входит по почте, создаёт комнату и открывает следующий вопрос после разбора. Игрокам достаточно ника. Правильный ответ приносит один балл, при равенстве баллов участники занимают одно место. После завершения доступны распределения по каждому варианту и таблица лидеров. Ведущий может скачать CSV с ответом каждого участника на каждый вопрос, включая пропуски. Проект хранит ники и ответы в Supabase. Срок доступа к активной комнате составляет 6 часов, к результатам — 7 дней. Для регулярной уборки можно периодически удалять в SQL Editor истёкшие комнаты командой `delete from asma_private.rooms where expires_at < now();`. Связанные игроки и ответы удаляются каскадно.
+With Node.js 22 or later, run `npm start` and open the address printed in the terminal. To run the automated tests, use `npm ci` followed by `npm test`.
 
-Избранное синхронизируется после входа. Сольная статистика и расписание повторений хранятся в текущем браузере.
+To enable group play and account features on your own deployment, run [`supabase/schema.sql`](supabase/schema.sql) in your Supabase project. Enable email and anonymous sign-in, set the deployed app address as the Auth Site URL, and add your Project URL and publishable key to [`docs/config.js`](docs/config.js). Keep secret and service-role keys out of the frontend. [Supabase anonymous sign-in guide](https://supabase.com/docs/guides/auth/auth-anonymous) · [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys)
 
-## Запуск и проверки
+## Sources
 
-Понадобится Node.js 22 или новее. Перейди в папку проекта и запусти:
+[Quran 7:180](https://quran.com/7/180) calls on believers to invoke Allah by His beautiful names. [Sahih al-Bukhari 2736](https://sunnah.com/bukhari:2736) mentions 99 names without listing them. The study catalogue follows the traditional enumeration in [Jamiʿ at-Tirmidhi 3507](https://sunnah.com/tirmidhi:3507). The app's source notes describe the scholarly discussion about the transmission of that list. Translations and memory cues are learning aids.
 
-```sh
-npm start
-```
+## License
 
-Открой адрес, который напечатает команда. Для локального просмотра и GitHub Pages сборка и установка пакетов не нужны. Если PowerShell блокирует `npm.ps1`, используй `npm.cmd start`.
-
-```sh
-npm ci
-npm test
-```
-
-Автотесты проверяют полноту карточек, случайную выборку, 50/50, интервалы повторения, декодирование QR, CSV, клиент входа и жизненный цикл комнаты на PostgreSQL через PGlite. Интеграционная проверка использует отдельные роли ведущего, игроков и постороннего пользователя.
-
-Для локальной проверки игры после `npm ci` выполни `node tests/preview-cloud.mjs`. Две ссылки в терминале открывают ведущего и игрока в отдельных браузерных сессиях. Запроси письмо для `host@example.test`, затем открой `http://127.0.0.1:4184/__preview/email?email=host%40example.test` в том же браузере или введи тестовый код `112233`. Игрок вводит код комнаты вручную. Эта проверка использует временную базу и имитирует письмо. Доставка писем и подключение телефонов проверяются после публикации с подключённым Supabase.
-
-## Редактирование карточек и источники
-
-[docs/names.js](docs/names.js) хранит карточки, группы, пояснения, ассоциации и ссылки. Внутри этого файла порядок определяет ID, который сохраняется в избранном и результатах игр. Для обновления опубликованного каталога редактируй записи на своих местах. [docs/verses.js](docs/verses.js) хранит выбранные отрывки и их учебные переводы. Арабские формы имён в [docs/verse-forms.js](docs/verse-forms.js) взяты из текста Quran.com.
-
-Каталог следует традиционному перечислению у ат-Тирмизи 3507. Хадис аль-Бухари 2736 подтверждает сообщение о 99 именах без перечня. О происхождении перечисления у ат-Тирмизи есть хадисоведческое обсуждение, отмеченное в приложении. Каждая карточка даёт ссылки, а для косвенных свидетельств указывает контекст. Различия между близкими именами передают учебные акценты. Для повторной сверки ссылок и арабских отрывков запусти `node tests/audit-sources.mjs` с подключением к интернету. [Коран 7:180](https://quran.com/7/180), [Коран 59:22–24](https://quran.com/59/22-24), [аль-Бухари 2736](https://sunnah.com/bukhari:2736), [ат-Тирмизи 3507](https://sunnah.com/tirmidhi:3507), [Ибн Хаджар, «Булуг аль-Марам» 1382](https://sunnah.com/bulugh/13/9)
-
-Генератор QR взят из `qrcode-generator` 2.0.4. [Лицензия MIT](docs/vendor/LICENSE.txt)
+[MIT](LICENSE)
