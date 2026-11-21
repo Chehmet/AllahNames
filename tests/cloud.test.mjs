@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { config } from '../docs/config.js';
 
-test('cloud client sends an email code, refreshes once for concurrent calls, and supports anonymous players', async context => {
+test('cloud client handles links and codes, refreshes once for concurrent calls, and supports anonymous players', async context => {
   config.url = 'https://example.test/';
   config.key = 'sb_publishable_test_value';
   const data = new Map();
@@ -16,6 +17,8 @@ test('cloud client sends an email code, refreshes once for concurrent calls, and
   const user = { id: 'host-id', email: 'host@example.test', is_anonymous: false };
   const guest = { id: 'player-id', is_anonymous: true };
   const received = [];
+  const redirect = 'https://chehmet.github.io/AllahNames/';
+  let challenge;
   const response = (identity, tag, expiry) => ({
     user: identity, access_token: 'token-' + tag, refresh_token: 'refresh-' + tag, expires_in: expiry
   });
@@ -27,13 +30,25 @@ test('cloud client sends an email code, refreshes once for concurrent calls, and
     received.push(path);
     switch (path) {
       case '/auth/v1/otp':
-        assert.deepEqual(body, { email: user.email, create_user: true });
+        assert.equal(new URL(url).searchParams.get('redirect_to'), redirect);
+        assert.equal(body.email, user.email);
+        assert.equal(body.create_user, true);
+        assert.equal(body.code_challenge_method, 's256');
+        assert.match(body.code_challenge, /^[\w-]{43}$/);
+        challenge = body.code_challenge;
         return Response.json({});
       case '/auth/v1/verify':
         if (body.token === '000000') return Response.json({ msg: 'Expired code' }, { status: 403 });
         assert.deepEqual(body, { email: user.email, type: 'email', token: '112233' });
         return Response.json(response(user, 'initial', 0));
       case '/auth/v1/token':
+        if (new URL(url).searchParams.get('grant_type') === 'pkce') {
+          assert.match(body.code_verifier, /^[0-9a-f]{64}$/);
+          assert.equal(createHash('sha256').update(body.code_verifier).digest('base64url'), challenge);
+          if (body.auth_code === 'expired') return Response.json({ error_code: 'flow_state_expired' }, { status: 400 });
+          assert.equal(body.auth_code, 'from-email');
+          return Response.json(response(user, 'from-link', 3600));
+        }
         assert.deepEqual(body, { refresh_token: 'refresh-initial' });
         return Response.json(response(user, 'fresh', 3600));
       case '/rest/v1/rpc/aq_sync_favorites':
@@ -53,7 +68,7 @@ test('cloud client sends an email code, refreshes once for concurrent calls, and
   const client = await import('../docs/cloud.js');
   assert.equal(client.enabled, true);
   assert.equal(client.account(), null);
-  await client.sendCode(user.email);
+  await client.sendSignInEmail(user.email, redirect);
   await assert.rejects(client.verifyCode(user.email, '000000'), /Expired code/);
   await client.verifyCode(user.email, '112233');
   assert.equal(client.account().id, user.id);
@@ -67,4 +82,18 @@ test('cloud client sends an email code, refreshes once for concurrent calls, and
   assert.equal(client.identity(), guest.id);
   assert.equal(client.account(), null);
   assert.equal(received.filter(path => path === '/auth/v1/signup').length, 1);
+  assert.equal(client.emailLink(redirect + '?room=ABCD#room'), null);
+  assert.deepEqual(client.emailLink(redirect + '?code=from-email&room=ABCD#room'), {
+    address: redirect + '?room=ABCD#room', code: 'from-email'
+  });
+  assert.deepEqual(client.emailLink(redirect + '#error=access_denied&error_code=otp_expired'), {
+    address: redirect, code: null
+  });
+  await assert.rejects(client.signInFromLink('from-email'), { code: 'missing_verifier' });
+  await client.sendSignInEmail(user.email, redirect);
+  await assert.rejects(client.signInFromLink('expired'), { code: 'flow_state_expired' });
+  assert.equal(client.identity(), guest.id);
+  await client.signInFromLink('from-email');
+  assert.equal(client.account().id, user.id);
+  await assert.rejects(client.signInFromLink('from-email'), { code: 'missing_verifier' });
 });

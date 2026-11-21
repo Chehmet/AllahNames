@@ -4,6 +4,7 @@ import { read, save } from './ui.js';
 export const enabled = Boolean(config.url && config.key);
 const base = config.url.replace(/\/$/, '');
 const sessionKey = 'session.' + base;
+const verifierKey = 'email-verifier.' + base;
 let session = enabled ? read(sessionKey, null) : null;
 let refreshing;
 let signingIn;
@@ -77,9 +78,54 @@ export async function guest() {
   return signingIn;
 }
 
-export const sendCode = email => request('/auth/v1/otp', { body: { email, create_user: true } });
-export const verifyCode = (email, token) =>
-  request('/auth/v1/verify', { body: { email, token, type: 'email' } }).then(receive);
+export async function sendSignInEmail(email, redirectTo) {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const verifier = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const params = new URLSearchParams({ redirect_to: redirectTo });
+  await request('/auth/v1/otp?' + params, {
+    body: { email, create_user: true, code_challenge: challenge, code_challenge_method: 's256' }
+  });
+  save(verifierKey, verifier);
+}
+
+export function emailLink(address) {
+  const url = new URL(address);
+  const fragment = new URLSearchParams(url.hash.slice(1));
+  const code = url.searchParams.get('code');
+  const fragmentError = fragment.has('error') || fragment.has('error_code');
+  const legacyLink = fragment.has('access_token') || fragment.has('refresh_token');
+  if (!url.searchParams.has('code') && !url.searchParams.has('error') && !url.searchParams.has('error_code')
+      && !fragmentError && !legacyLink) return null;
+  for (const key of ['code', 'error', 'error_code', 'error_description']) url.searchParams.delete(key);
+  if (fragmentError || legacyLink) url.hash = '';
+  return { code, address: url.href };
+}
+
+export async function signInFromLink(code) {
+  if (!code) throw new Error('Email link is invalid or expired');
+  const verifier = read(verifierKey, null);
+  if (!verifier) {
+    const error = new Error('Email link opened in a different browser');
+    error.code = 'missing_verifier';
+    throw error;
+  }
+  const result = await request('/auth/v1/token?grant_type=pkce', {
+    body: { auth_code: code, code_verifier: verifier }
+  });
+  const active = receive(result);
+  if (read(verifierKey, null) === verifier) save(verifierKey, null);
+  return active;
+}
+
+export async function verifyCode(email, token) {
+  const result = await request('/auth/v1/verify', { body: { email, token, type: 'email' } });
+  const active = receive(result);
+  save(verifierKey, null);
+  return active;
+}
 
 export async function signout() {
   try {
@@ -87,6 +133,7 @@ export async function signout() {
     if (current) await request('/auth/v1/logout?scope=local', { token: current.access_token });
   } finally {
     storeSession(null);
+    save(verifierKey, null);
   }
 }
 

@@ -1,12 +1,13 @@
 // Local browser QA. Two origins emulate two devices against the same in-memory database.
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { serve } from './serve.mjs';
 import { testDatabase } from './postgres.mjs';
 
 const db = await testDatabase();
 const tokens = new Map();
 const accounts = new Map();
-const codes = new Set();
+const mail = new Map();
+const exchangeCodes = new Map();
 const operations = {
   aq_sync_favorites: ['p_ids'], aq_favorite: ['p_name', 'p_saved'],
   aq_create_room: ['p_questions'], aq_join_room: ['p_code', 'p_nickname'],
@@ -32,6 +33,25 @@ async function intercept(request, response, url) {
     response.end("export const config = { url: location.origin, key: 'local-test' };");
     return true;
   }
+  if (url.pathname === '/__preview/email') {
+    const email = url.searchParams.get('email');
+    const draft = mail.get(email);
+    if (!draft) {
+      response.writeHead(404).end('Request a sign-in email in this browser first');
+      return true;
+    }
+    const back = new URL(draft.redirect);
+    if (back.origin !== `http://${request.headers.host}`) {
+      response.writeHead(400).end('Use the test address from this origin');
+      return true;
+    }
+    const code = randomUUID();
+    mail.delete(email);
+    exchangeCodes.set(code, { email, challenge: draft.challenge });
+    back.searchParams.set('code', code);
+    response.writeHead(303, { Location: back.href }).end();
+    return true;
+  }
   if (!/^\/(auth|rest)\/v1\//.test(url.pathname)) return false;
   const send = (body, status = 200) => {
     response.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
@@ -44,12 +64,21 @@ async function intercept(request, response, url) {
     const token = request.headers.authorization?.slice(7);
     if (url.pathname === '/auth/v1/otp') {
       if (!/^[^@]+@example\.test$/.test(body.email)) return send({ message: 'Use an example.test address' }, 400);
-      codes.add(body.email);
+      const redirect = url.searchParams.get('redirect_to');
+      if (!redirect || body.code_challenge_method !== 's256') return send({ message: 'Missing PKCE request parameters' }, 400);
+      mail.set(body.email, { redirect, challenge: body.code_challenge });
       return send({});
     }
     if (url.pathname === '/auth/v1/verify') {
-      if (body.token !== '112233' || !codes.delete(body.email)) return send({ message: 'Invalid code' }, 400);
+      if (body.token !== '112233' || !mail.delete(body.email)) return send({ message: 'Invalid code' }, 400);
       return send(await login(body.email));
+    }
+    if (url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'pkce') {
+      const draft = exchangeCodes.get(body.auth_code);
+      const challenge = createHash('sha256').update(body.code_verifier || '').digest('base64url');
+      if (!draft || draft.challenge !== challenge) return send({ message: 'Invalid email link' }, 400);
+      exchangeCodes.delete(body.auth_code);
+      return send(await login(draft.email));
     }
     if (url.pathname === '/auth/v1/signup') return send(await login());
     if (url.pathname === '/auth/v1/logout') {

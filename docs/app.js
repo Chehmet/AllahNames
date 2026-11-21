@@ -332,13 +332,14 @@ function auth() {
     ? `<p>${t('В этой копии сайта избранное сохраняется в браузере. Для входа и синхронизации нужно подключить Supabase.', 'This copy saves favorites in your browser. Connect Supabase to enable sign-in and syncing.')}</p>`
     : user ? `<p>${esc(user.email)}</p><p>${t('Избранное синхронизируется между устройствами.', 'Favorites sync across devices.')}</p><div class="actions">
       ${btn(t('Выйти', 'Sign out'), 'signout', 'outline')}</div>`
-      : email ? `<form id="verify-code" class="stack"><p>${t('Введи код из письма, отправленного на', 'Enter the code sent to')} <strong>${esc(email)}</strong>.</p>
-        <label>${t('Код из письма', 'Email code')}<input name="token" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6,10}" required></label>
+      : email ? `<form id="verify-code" class="stack"><p>${t('Проверь почту', 'Check your inbox')} <strong>${esc(email)}</strong>.
+        ${t('Открой ссылку из письма в этом же браузере.', 'Open the link from the email in this same browser.')}</p>
+        <label>${t('Если в письме код, введи его здесь', 'If the email contains a code, enter it here')}<input name="token" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6,10}" required></label>
         <div class="actions"><button class="button primary" type="submit">${t('Подтвердить', 'Verify')}</button>
-          ${btn(t('Другой адрес или новый код', 'Change email or request a new code'), 'new-code', 'outline')}</div>${formError}</form>`
-      : `<form id="send-code" class="stack"><p>${t('Код придёт на почту. После входа можно открыть избранное на другом устройстве и вести общие игры.', 'A code will arrive by email. Sign in to access favorites on another device and host live games.')}</p>
+          ${btn(t('Другой адрес или новое письмо', 'Change email or request a new email'), 'new-email', 'outline')}</div>${formError}</form>`
+      : `<form id="send-email" class="stack"><p>${t('На почту придёт письмо для входа. Войди, чтобы сохранять избранное между устройствами и вести общие игры.', 'We will send you a sign-in email. Sign in to sync favorites and host live games.')}</p>
         <label>${t('Электронная почта', 'Email address')}<input name="email" type="email" autocomplete="email" required></label>
-        <div class="actions"><button class="button primary" type="submit">${t('Получить код', 'Get code')}</button></div>${formError}</form>`}</div>`);
+        <div class="actions"><button class="button primary" type="submit">${t('Получить письмо', 'Send sign-in email')}</button></div>${formError}</form>`}</div>`);
 }
 
 async function syncFavorites() {
@@ -350,6 +351,15 @@ async function syncFavorites() {
   if (cloud.account()?.id === user.id && guestFavorites.length) {
     save('favorites', read('favorites', []).filter(id => !guestFavorites.includes(id)));
   }
+}
+
+async function signedIn() {
+  email = '';
+  roomView?.reset();
+  try { await syncFavorites(); }
+  catch { notify(t('Вход выполнен. Избранное пока не синхронизировалось.', 'Signed in. Favorites could not sync yet.')); }
+  renderChrome();
+  render();
 }
 
 function updateFavoriteButtons(id) {
@@ -527,7 +537,7 @@ document.addEventListener('click', event => {
     case 'auth': auth(); break;
     case 'sources': sources(); break;
     case 'close': dialog.close(); break;
-    case 'new-code': email = ''; auth(); break;
+    case 'new-email': email = ''; auth(); break;
     case 'signout':
       button.disabled = true;
       favoriteQueue.then(() => cloud.signout()).catch(() => {}).finally(() => {
@@ -556,7 +566,7 @@ function formError(form, message) {
 
 document.addEventListener('submit', async event => {
   const form = event.target;
-  if (!['quiz-setup', 'verify-code', 'send-code'].includes(form.id)) return;
+  if (!['quiz-setup', 'verify-code', 'send-email'].includes(form.id)) return;
   event.preventDefault();
   const data = Object.fromEntries(new FormData(form));
   if (form.id === 'quiz-setup') {
@@ -572,24 +582,19 @@ document.addEventListener('submit', async event => {
   submit.disabled = true;
   formError(form, '');
   try {
-    if (form.id === 'send-code') {
-      await cloud.sendCode(data.email);
+    if (form.id === 'send-email') {
+      await cloud.sendSignInEmail(data.email, new URL('.', location.href).href);
       email = data.email;
       if (dialog.open && dialog.contains(form)) auth();
     } else {
       await cloud.verifyCode(email, data.token);
-      email = '';
-      roomView?.reset();
-      try { await syncFavorites(); }
-      catch { notify(t('Вход выполнен. Избранное пока не синхронизировалось.', 'Signed in. Favorites could not sync yet.')); }
-      renderChrome();
-      render();
+      await signedIn();
       if (dialog.open && dialog.contains(form)) dialog.close();
     }
   } catch {
-    formError(form, form.id === 'send-code'
-      ? t('Не удалось отправить код. Проверь адрес и попробуй ещё раз чуть позже.', 'Could not send the code. Check your address and try again shortly.')
-      : t('Не удалось подтвердить код. Проверь цифры или запроси новый код.', 'Could not verify the code. Check the digits or request a new code.'));
+    formError(form, form.id === 'send-email'
+      ? t('Не удалось отправить письмо. Проверь адрес и попробуй ещё раз чуть позже.', 'Could not send the email. Check your address and try again shortly.')
+      : t('Не удалось подтвердить код. Проверь цифры или запроси новое письмо.', 'Could not verify the code. Check the digits or request a new email.'));
   } finally { submit.disabled = false; }
 });
 
@@ -613,8 +618,25 @@ dialog.addEventListener('close', () => { detail = undefined; });
 dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
 window.addEventListener('hashchange', () => navigate());
 setLanguage(language);
+const callback = cloud.enabled && cloud.emailLink(location.href);
+if (callback) window.history.replaceState(null, '', callback.address);
 navigate(true);
-if (cloud.enabled && cloud.account()) syncFavorites().catch(() => {}).finally(() => {
+if (callback) {
+  cloud.signInFromLink(callback.code).then(async () => {
+    if (dialog.open) dialog.close();
+    notify(t('Ты вошла в аккаунт', 'You are signed in'));
+    await signedIn();
+  }).catch(error => {
+    auth();
+    const text = error.code === 'missing_verifier'
+      ? t('Открой ссылку в том же браузере, где запросила письмо, или запроси новое письмо здесь.',
+        'Open the link in the browser where you requested it, or request a new email here.')
+      : t('Ссылка недействительна или просрочена. Запроси новое письмо.', 'The link is invalid or expired. Request a new email.');
+    const form = dialogBody.querySelector('#send-email');
+    if (form) formError(form, text);
+    else notify(text);
+  });
+} else if (cloud.enabled && cloud.account()) syncFavorites().catch(() => {}).finally(() => {
   renderChrome();
   if (route !== 'room') render();
   if (detail && dialog.open) updateFavoriteButtons(detail.id);
