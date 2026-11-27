@@ -31,3 +31,7 @@ To enable group play and account features on your own deployment, run [`supabase
 ## License
 
 [MIT](LICENSE)
+
+## Contacts
+
+В случае вопросов, предложений, замечаний, пишите на почту valiullinac2004@gmail.com
