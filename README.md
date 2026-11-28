@@ -37,3 +37,7 @@ For an existing deployment, run the updated [`supabase/schema.sql`](supabase/sch
 ## License
 
 [MIT](LICENSE)
+
+## Contacts
+
+В случае вопросов, предложений, замечаний, пишите на почту valiullinac2004@gmail.com
