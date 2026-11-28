@@ -220,6 +220,21 @@ dialog #dialog-body { position: relative; padding: 24px; }
 .stat strong { font-size: 1.45rem; display: block; }
 .room-code { font-size: clamp(2rem, 8vw, 3.7rem); letter-spacing: .12em; font-variant-numeric: tabular-nums; color: var(--primary); font-weight: 750; }
 .room-lobby { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 15px; }
+.round-clock { flex: none; min-width: 3.3em; text-align: center; padding: .25em .45em; border-radius: .5em; background: var(--wash); color: var(--primary); font-variant-numeric: tabular-nums; }
+.answer-percentages { display: flex; flex-wrap: wrap; gap: .5rem; }
+.answer-percentages > span { padding: .38rem .6rem; border-radius: .5rem; background: var(--wash); }
+.answer-percentages .correct-share { color: var(--good); background: var(--good-bg); }
+.answer-percentages .wrong-share { color: var(--bad); background: var(--bad-bg); }
+.podium { display: flex; padding: 0; margin: 0; list-style: none; gap: .6rem; align-items: end; }
+.podium-place { flex: 1; min-width: 0; padding: .7rem .4rem; display: grid; gap: .5rem; text-align: center; align-content: center; background: var(--wash); border: 1px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
+.podium-place.place-1 { min-height: 9rem; border-color: var(--accent-line); color: var(--primary); }
+.podium-place.place-2 { min-height: 7rem; order: -1; }
+.podium-place.place-3 { min-height: 6rem; }
+.podium-place > strong { font-size: 1.6rem; line-height: 1; }
+.podium-place ul { padding: 0; margin: 0; list-style: none; font-weight: 650; }
+.review-names { display: flex; flex-wrap: wrap; column-gap: 1.7rem; row-gap: .35rem; }
+.study-details { padding: .85rem 1rem; border: 1px solid var(--line); border-radius: 12px; }
+.study-details p { margin-block: .65em; }
 .qr { padding: 11px; border: 1px solid var(--line); border-radius: 11px; display: grid; place-items: center; }
 .qr canvas { max-width: 100%; height: auto; image-rendering: pixelated; }
 .players { margin: 0; padding-left: 1.25rem; line-height: 1.55; overflow-wrap: anywhere; }

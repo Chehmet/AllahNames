@@ -1,7 +1,7 @@
 import { byId, names } from './names.js';
 import { makeQuiz } from './quiz.js';
 import * as cloud from './cloud.js';
-import { alternateName, ar, btn, cueDisclosure, displayName, empty, esc, heading, language, nameButton, opt, read, save, stat, t } from './ui.js';
+import { ar, btn, cueDisclosure, empty, esc, heading, language, nameButton, opt, read, save, stat, t } from './ui.js';
 
 const validCode = value => /^[A-F0-9]{8}$/.test(value || '');
 const inviteCode = () => (new URL(location.href).searchParams.get('room') || '').trim().toUpperCase();
@@ -14,42 +14,74 @@ export function invitation(page, code) {
   return url.href;
 }
 
-const answerText = (id, mode) => mode === 'reverse' ? `${ar(byId.get(id))} ${displayName(byId.get(id))}`
-  : esc(byId.get(id).meaning[language]);
+const catalogueCard = id => {
+  const name = byId.get(id);
+  return [name.ar, name.ru, name.latin, ...name.meaning];
+};
+const nameText = (card, locale) => esc(card[1 + locale]);
+const bothNames = (card, locale) => `${nameText(card, locale)} <small lang="${locale ? 'ru' : 'en'}">${nameText(card, 1 - locale)}</small>`;
+const answerText = (label, mode, locale) => mode === 'reverse' ? `${ar({ ar: label[0] })}${bothNames(label, locale)}` : esc(label[locale]);
+const optionLabel = (id, question) => question.labels?.[id] || roomLabel(question.cards?.[id] || catalogueCard(id), question.mode);
+const roomLabel = (card, mode) => mode === 'reverse' ? card.slice(0, 3) : card.slice(3);
 
-function prompt(question, contentId) {
-  const name = byId.get(contentId);
+function prompt(question, contentId, locale) {
+  const card = question.mode === 'reverse' ? null : question.promptName || catalogueCard(contentId);
   return `<div class="quiz-prompt"><p class="eyebrow">${question.mode === 'reverse'
     ? t('Какое это имя?', 'Which name is it?') : t('Что означает имя?', 'What does the name mean?')}</p>
-    ${question.mode === 'reverse' ? `<h2>${esc(question.wording[language])}</h2>` : `${ar(name)}
-    ${question.mode === 'name' ? `<h2>${displayName(name)}</h2>${alternateName(name)}` : ''}`}</div>`;
+    ${question.mode === 'reverse' ? `<h2>${esc(question.wording[locale])}</h2>` : `${ar({ ar: card[0] })}
+    ${question.mode === 'name' ? `<h2>${bothNames(card, locale)}</h2>` : ''}`}</div>`;
 }
 
-function distribution(result, count) {
+const percentage = (value, total) => total ? Math.round(value * 100 / total) + '%' : '0%';
+const pointsText = points => {
+  const quantity = new Intl.NumberFormat(t('ru', 'en')).format(points);
+  if (language) return quantity + (points === 1 ? ' point' : ' points');
+  const unit = { one: 'балл', few: 'балла', many: 'баллов' }[new Intl.PluralRules('ru').select(points)];
+  return `${quantity} ${unit}`;
+};
+
+function distribution(result, count, locale, open = false) {
   const name = byId.get(result.id);
   const replied = result.options.reduce((sum, option) => sum + option.count, 0);
-  return `<article class="card stack"><h3>${result.round + 1}. ${nameButton(name)} · ${esc(name.meaning[language])}</h3>
-    <p class="secondary-language">${t('Ответили', 'Answered')} · ${replied}/${count}</p>
-    <div class="table-wrap"><table><thead><tr>
+  const correct = result.options.find(option => option.id === result.id).count;
+  const wrong = replied - correct;
+  const missed = count - replied;
+  const card = result.cards?.[result.id] || catalogueCard(result.id);
+  return `<article class="card stack"><h3>${result.round + 1}. ${nameButton(name, nameText(card, locale))} · ${esc(card[3 + locale])}</h3>
+    <div class="answer-percentages" aria-label="${t('Доля от всех игроков', 'Share of all players')}">
+    <span class="correct-share"><strong>${percentage(correct, count)}</strong> ${t('верно', 'correct')} <small>(${correct}/${count})</small></span>
+    <span class="wrong-share"><strong>${percentage(wrong, count)}</strong> ${t('неверно', 'incorrect')} <small>(${wrong}/${count})</small></span>
+    <span><strong>${percentage(missed, count)}</strong> ${t('пропустили', 'skipped')} <small>(${missed}/${count})</small></span></div>
+    <details ${open ? 'open' : ''}><summary>${t('Ответы по вариантам', 'Answers by choice')}</summary><div class="table-wrap"><table><thead><tr>
     <th scope="col">${t('Вариант', 'Choice')}</th><th scope="col">${t('Ответов', 'Responses')}</th><th scope="col">${t('Доля', 'Share')}</th>
     </tr></thead><tbody>
-    ${result.options.map(option => `<tr><td>${answerText(option.id, result.mode)} ${option.id === result.id ? `<strong class="tag-correct">· ${t('верно', 'correct')}</strong>` : ''}</td>
-      <td>${option.count}</td><td>${replied ? Math.round(100 * option.count / replied) : 0}%</td></tr>`).join('')}
-    </tbody></table></div>${cueDisclosure(name)}</article>`;
+    ${result.options.map(option => `<tr><td>${answerText(optionLabel(option.id, result), result.mode, locale)} ${option.id === result.id ? `<strong class="tag-correct">· ${t('верно', 'correct')}</strong>` : ''}</td>
+      <td>${option.count}</td><td>${percentage(option.count, count)}</td></tr>`).join('')}
+    </tbody></table></div></details>${cueDisclosure(name)}</article>`;
 }
 
 function standings(game) {
-  const totalPicks = game.leaderboard.reduce((sum, player) => sum + player.submitted, 0);
-  const totalCorrect = game.leaderboard.reduce((sum, player) => sum + player.score, 0);
-  return `<div class="stats">${stat(game.players.length, t('Игроков', 'Players'))}
-    ${stat(totalPicks, t('Ответов', 'Responses'))}${stat(totalPicks ? Math.round(100 * totalCorrect / totalPicks) + '%' : '—', t('Верных среди полученных', 'Correct among submitted answers'))}</div>
-    <div class="card stack"><h2>${t('Таблица лидеров', 'Leaderboard')}</h2>
-    <div class="table-wrap"><table><thead><tr><th scope="col">${t('Место', 'Rank')}</th><th scope="col">${t('Игрок', 'Player')}</th>
-    <th scope="col">${t('Правильно', 'Correct')}</th><th scope="col">${t('Отвечено', 'Answered')}</th></tr></thead><tbody>
-    ${game.leaderboard.map(player => `<tr><td>${player.place}</td><td>${esc(player.nickname)}</td><td>${player.score}/${game.total}</td><td>${player.submitted}</td></tr>`).join('')}
-    </tbody></table></div>
-    ${game.host ? `<div class="actions"><button type="button" class="button outline" data-room-action="export">${t('Скачать все ответы (CSV)', 'Download all responses (CSV)')}</button></div>` : ''}</div>
-    <h2>${t('Статистика по вопросам', 'Results by question')}</h2>${game.results.map(result => distribution(result, game.players.length)).join('')}`;
+  const locale = game.language ?? language;
+  const correct = game.results.reduce((total, result) => total + result.options.find(option => option.id === result.id).count, 0);
+  const podium = [1, 2, 3].map(place => {
+    const winners = game.leaderboard.filter(player => player.place === place && player.score > 0);
+    return winners.length ? `<li class="podium-place place-${place}"><strong>${place}</strong>
+      <ul>${winners.map(player => `<li>${esc(player.nickname)}</li>`).join('')}</ul>
+      <small>${pointsText(winners[0].score)}</small></li>` : '';
+  }).join('');
+  const stats = game.personal;
+  const measurements = stats && `<section class="card stack"><h2>${t('Твой результат', 'Your results')}</h2>
+    <div class="stats">${stat(`${stats.correct}/${game.total}`, t('Верных ответов', 'Correct answers'))}
+    ${stat(stats.submitted, t('Отвечено', 'Answered'))}${stat(stats.points, t('Баллы', 'Points'))}</div>
+    ${stats.review.length ? `<details><summary>${t('Что повторить', 'Names to review')}</summary><ul class="review-names">
+      ${stats.review.map(id => `<li>${nameButton(byId.get(id))}</li>`).join('')}</ul></details>`
+    : `<p>${t('Все ответы верны. Попробуй вспомнить имена без вариантов ответа.', 'All answers were correct. Try recalling the names without the options.')}</p>`}</section>`;
+  return `${measurements}${podium ? `<section class="card stack"><h2>${t('Пьедестал', 'Podium')}</h2>
+    <ol class="podium">${podium}</ol></section>` : ''}
+    <div class="stats">${stat(game.players.length, t('Игроков', 'Players'))}
+    ${stat(percentage(correct, game.total * game.players.length), t('Верных ответов у группы', 'Correct answers across the group'))}</div>
+    ${game.host ? `<div class="actions"><button type="button" class="button outline" data-room-action="export">${t('Скачать все ответы (CSV)', 'Download all responses (CSV)')}</button></div>` : ''}
+    <h2>${t('Статистика по вопросам', 'Results by question')}</h2>${game.results.map(result => distribution(result, game.players.length, locale)).join('')}`;
 }
 
 const labels = () => ({
@@ -58,11 +90,12 @@ const labels = () => ({
   nickname_taken: t('Это имя уже занято. Введи другое.', 'That nickname is taken. Choose another one.'),
   invalid_nickname: t('Введи имя длиной от 1 до 24 символов.', 'Enter a nickname of 1 to 24 characters.'),
   no_players: t('Подожди, пока подключится хотя бы один игрок.', 'Wait until at least one player has joined.'),
-  round_closed: t('Ведущий уже закрыл этот вопрос.', 'The host has already closed this question.'),
+  round_closed: t('Это окно ответов уже закрылось.', 'The answer window has closed.'),
   room_limit: t('Достигнут лимит открытых комнат. Заверши одну из игр.', 'You have reached the open-room limit. Finish one of your games.'),
   room_full: t('В комнате уже 60 игроков.', 'This room already has 60 players.')
 });
 export function roomErrorMessage(error) {
+  if (error.code === 'PGRST202') return t('Для новой игры обнови схему Supabase по инструкции в README.', 'Apply the Supabase schema update from the README to start a new game.');
   if (error.code === 'anonymous_provider_disabled') {
     return t('Гостевой вход выключен. Включите Allow anonymous sign-ins в настройках Supabase проекта.',
       'Guest sign-in is disabled. Enable Allow anonymous sign-ins in the project’s Supabase settings.');
@@ -76,11 +109,14 @@ export function gameCSV(rows) {
     const safe = /^[\s\uFEFF]*[=+\-@]/.test(text) ? "'" + text : text;
     return '"' + safe.replace(/"/g, '""') + '"';
   };
+  const hasScores = rows.some(row => row.points != null);
   const columns = t(['Игрок', 'Вопрос', 'Имя', 'Ответ', 'Результат'], ['Player', 'Question', 'Name', 'Answer', 'Result']);
+  if (hasScores) columns.push(...t(['Баллы', 'Время (мс)'], ['Points', 'Time (ms)']));
   const plainName = (id) => language ? byId.get(id).latin : byId.get(id).ru;
   return '\uFEFF' + [columns, ...rows.map(row => [
-    row.nickname, row.round, plainName(row.id), row.choice ? plainName(row.choice) : '',
-    row.correct == null ? t('Пропуск', 'Skipped') : row.correct ? t('Верно', 'Correct') : t('Неверно', 'Incorrect')
+    row.nickname, row.round, row.name || plainName(row.id), row.choice ? row.selectedName || plainName(row.choice) : '',
+    row.correct == null ? t('Пропуск', 'Skipped') : row.correct ? t('Верно', 'Correct') : t('Неверно', 'Incorrect'),
+    ...(hasScores ? [row.points, row.elapsedMs] : [])
   ])].map(row => row.map(cell).join(',')).join('\r\n');
 }
 
@@ -96,7 +132,7 @@ function exportAnswers(rows, code) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-export function createRoom(main, { auth, notify }) {
+export function createRoom(main, { auth, notify, onPhaseChange }) {
   let game;
   let active = false;
   let timer;
@@ -110,6 +146,12 @@ export function createRoom(main, { auth, notify }) {
   let stamp = '';
   let currentCode = '';
   let generation = 0;
+  let phase = '';
+  let countdown;
+  let endTime;
+  const inRound = () => active && ['question', 'reveal'].includes(game?.phase);
+  const rememberedCode = () => cloud.identity() && read('room.' + cloud.identity(), '');
+  const secondsLeft = () => Math.max(0, Math.ceil((endTime - performance.now()) / 1000));
   const action = (text, name, style = 'outline', disabled = false) => `<button type="button"
     class="button ${style}" data-room-action="${name}" ${disabled ? 'disabled' : ''}>${text}</button>`;
 
@@ -118,19 +160,23 @@ export function createRoom(main, { auth, notify }) {
       t('Ведущий показывает вопросы, а участники отвечают со своих телефонов.', 'The host shows the questions and players answer on their phones.'));
     if (!cloud.enabled) return title + empty(t('Для общей игры нужно подключить Supabase. Инструкция находится в README проекта.', 'Connect Supabase to enable live games. Setup is in the project README.'));
     const status = `<p class="notice" role="status" ${issue ? '' : 'hidden'}>${esc(issue)}</p>`;
+    const previous = rememberedCode();
     if (!game) return `<div class="narrow">${title}<div class="stack">
-      ${status}<form class="card stack form" id="join-room"><h2>${t('Войти в комнату', 'Join a room')}</h2>
+      ${status}${validCode(previous) ? `<section class="card stack"><h2>${t('Последняя комната', 'Last room')} · ${esc(previous)}</h2>
+      <div class="actions">${action(t('Вернуться в игру', 'Resume game'), 'resume-last', 'primary', working)}</div></section>` : ''}
+      <form class="card stack form" id="join-room"><h2>${t('Войти в комнату', 'Join a room')}</h2>
       <label>${t('Код комнаты', 'Room code')}<input name="code" value="${esc(draftCode)}" pattern="[A-Fa-f0-9]{8}" maxlength="8" autocapitalize="characters" spellcheck="false" required></label>
       <label>${t('Имя игрока', 'Nickname')}<input name="nickname" value="${esc(draftNickname)}" maxlength="24" required></label>
       <div class="actions"><button type="submit" class="button primary" ${working ? 'disabled' : ''}>${t('Присоединиться', 'Join')}</button>
-      ${cloud.identity() && validCode(draftCode) ? action(t('Вернуться в игру', 'Resume game'), 'resume', 'outline', working) : ''}</div></form>
+      ${cloud.identity() && validCode(draftCode) && draftCode !== previous ? action(t('Вернуться по коду', 'Resume by code'), 'resume', 'outline', working) : ''}</div></form>
       <div class="card stack"><h2>${t('Для ведущего', 'For the host')}</h2>${cloud.account() ? `<form class="stack" id="create-room">
         <label>${t('Количество вопросов', 'Question count')}<input name="count" type="number" min="1" max="99" value="${count}" required></label>
         <label>${t('Сложность', 'Difficulty')}<select name="difficulty">
         ${opt('easy', t('Лёгкая', 'Easy'), difficulty)}${opt('medium', t('Средняя', 'Medium'), difficulty)}${opt('hard', t('Сложная', 'Hard'), difficulty)}</select></label>
         <div class="actions"><button type="submit" class="button primary" ${working ? 'disabled' : ''}>${t('Создать комнату', 'Create room')}</button></div></form>`
         : `<div class="actions">${btn(t('Войти по почте', 'Sign in by email'), 'auth', 'outline')}</div>`}</div></div></div>`;
-    const code = `<p class="countline">${t('Комната', 'Room')} · ${game.code} ${action(t('Покинуть экран игры', 'Leave game screen'), 'leave', 'outline small')}</p>`;
+    const code = `<p class="countline">${t('Комната', 'Room')} · ${game.code} ${action(t('Выйти из игры', 'Leave game'), 'leave', 'outline small', working)}</p>`;
+    const locale = game.language ?? language;
     if (game.phase === 'lobby') return `<div class="narrow">${title}<div class="card stack">${code}${status}
       <div class="room-lobby"><div class="stack"><div><p>${t('Код для входа', 'Join code')}</p><p class="room-code">${game.code}</p></div>
       <div class="actions">${action(t('Копировать ссылку', 'Copy link'), 'copy', 'outline small')}</div>
@@ -139,37 +185,64 @@ export function createRoom(main, { auth, notify }) {
       <h2>${t('Игроки', 'Players')} · ${game.players.length}</h2>
       ${game.players.length ? `<ul class="players">${game.players.map(player => `<li>${esc(player)}</li>`).join('')}</ul>`
         : `<p class="subtitle">${t('Ждём подключения.', 'Waiting for players.')}</p>`}
+      ${game.language != null ? `<p class="secondary-language">${t('За верный ответ — 1000 баллов и до 250 за скорость. Можно менять ответ, пока вопрос открыт.',
+        'A correct answer earns 1,000 points plus up to 250 for speed. You can change your answer while the question is open.')}</p>` : ''}
       ${game.host ? `<div class="actions">${action(t('Начать игру', 'Start game'), 'advance', 'primary', working || !game.players.length)}</div>`
         : `<p class="note">${t('Ведущий скоро запустит игру.', 'The host will start the game.')}</p>`}
       </div></div>`;
     if (game.phase === 'finished') return `<div class="narrow">${heading(t('Результаты игры', 'Game results'))}
       <div class="stack">${code}${status}${standings(game)}</div></div>`;
     const countline = `<p class="countline">${t('Вопрос', 'Question')} ${game.round + 1}/${game.total}
-      <span>${t('Ответили', 'Answered')} · ${game.answered}/${game.players.length}</span></p>`;
-    if (game.phase === 'reveal') return `<div class="narrow">${heading(t('Разбор вопроса', 'Question review'))}<div class="stack">${code}${status}${countline}
+      <span>${t('Ответили', 'Answered')} · ${game.answered}/${game.players.length}</span>
+      ${game.deadline ? `<span class="round-clock" data-countdown aria-label="${t('Осталось секунд', 'Seconds left')}" role="timer"></span>` : ''}</p>`;
+    if (game.phase === 'reveal') return `<div class="narrow">${heading(t('Правильный ответ', 'Correct answer'))}<div class="stack">${code}${status}${countline}
       ${!game.host ? `<p class="note">${game.pick === game.distribution.id ? t('Твой ответ верный.', 'Your answer is correct.')
-        : game.pick ? t('Твой ответ неверный.', 'Your answer is incorrect.') : t('Ответ пропущен.', 'Question skipped.')}</p>` : ''}
-      ${distribution(game.distribution, game.players.length)}
-      ${game.host ? `<div class="actions">${action(game.round + 1 >= game.total ? t('Показать итоги', 'Show results') : t('Следующий вопрос', 'Next question'), 'advance', 'primary', working)}</div>` : ''}
+        : game.pick ? t('Твой ответ неверный.', 'Your answer is incorrect.') : t('Ответ пропущен.', 'Question skipped.')}
+        ${game.language != null && game.roundPoints > 0 ? `<strong>+${pointsText(game.roundPoints)}</strong>` : ''}</p>` : ''}
+      ${distribution(game.distribution, game.players.length, locale)}
+      ${game.host && game.language == null ? `<div class="actions">${action(game.round + 1 >= game.total ? t('Показать итоги', 'Show results') : t('Следующий вопрос', 'Next question'), 'advance', 'primary', working)}</div>` : ''}
       </div></div>`;
     return `<div class="narrow">${heading(t('Общий квиз', 'Live quiz'))}<div class="card stack">${code}${status}${countline}
-      ${prompt(game.question, game.prompt)}<div class="answer-grid">${game.question.options.map(id =>
-        `<button class="answer ${game.pick === id ? 'selected' : ''}" type="button" data-room-answer="${id}"
-        ${working || game.host || game.pick ? 'disabled' : ''}>${answerText(id, game.question.mode)}</button>`).join('')}</div>
-      ${game.pick ? `<p class="note" role="status">${t('Ответ принят. Ждём разбора.', 'Answer recorded. Waiting for the reveal.')}</p>` : ''}
+      ${prompt(game.question, game.prompt, locale)}<div class="answer-grid">${game.question.options.map(id => {
+        const text = answerText(optionLabel(id, game.question), game.question.mode, locale);
+        return game.host ? `<div class="answer">${text}</div>` : `<button class="answer ${game.pick === id ? 'selected' : ''}" type="button" data-room-answer="${id}"
+        aria-pressed="${game.pick === id}" ${working || (game.language == null && game.pick) ? 'disabled' : ''}>${text}</button>`;
+      }).join('')}</div>
+      ${game.question.hint?.[locale] ? `<details data-room-hint><summary>${t('Подсказка из источника', 'Source context hint')}</summary>
+      <p>${esc(game.question.hint[locale])}</p></details>` : ''}
+      ${game.pick ? `<p class="note" role="status">${game.language == null
+        ? t('Ответ принят. Ждём разбора.', 'Answer recorded. Waiting for the reveal.')
+        : t('Ответ принят. Чтобы изменить его, выбери другой вариант.', 'Answer recorded. Select another option to change it.')}</p>` : ''}
       ${game.host ? `<div class="actions">${action(t('Закрыть вопрос и показать ответ', 'Close question and reveal answer'), 'advance', 'primary', working)}</div>` : ''}
       </div></div>`;
   }
 
   function render() {
     if (!active) return;
+    const currentPhase = game ? `${game.phase}:${game.round}` : '';
+    const phaseChanged = currentPhase !== phase;
+    if (phaseChanged) {
+      phase = currentPhase;
+      onPhaseChange();
+    }
     const markup = screen();
     if (stamp === markup && main.querySelector('h1')) return;
     const focus = document.activeElement;
     const focusedAction = main.contains(focus) && focus.dataset.roomAction;
+    const focusedAnswer = main.contains(focus) && focus.dataset.roomAnswer;
+    const hintWasOpen = !phaseChanged && main.querySelector('[data-room-hint]')?.open;
     stamp = markup;
     main.innerHTML = markup;
-    if (focusedAction) main.querySelector(`[data-room-action="${focusedAction}"]`)?.focus({ preventScroll: true });
+    if (hintWasOpen) main.querySelector('[data-room-hint]').open = true;
+    if (phaseChanged && inRound() && !document.hidden) {
+      const title = main.querySelector('h1');
+      title.tabIndex = -1;
+      title.focus();
+    } else {
+      if (focusedAction) main.querySelector(`[data-room-action="${focusedAction}"]`)?.focus({ preventScroll: true });
+      if (focusedAnswer) main.querySelector(`[data-room-answer="${focusedAnswer}"]`)?.focus({ preventScroll: true });
+    }
+    paintCountdown();
     const canvas = main.querySelector('#room-qr');
     if (canvas) import('./qr.js').then(({ drawQR }) => {
       if (canvas.isConnected && game) drawQR(canvas, invitation(location.href, game.code));
@@ -180,10 +253,25 @@ export function createRoom(main, { auth, notify }) {
     clearTimeout(timer);
   }
 
+  function paintCountdown() {
+    clearTimeout(countdown);
+    const target = main.querySelector('[data-countdown]');
+    if (!active || !target || endTime == null) return;
+    const seconds = secondsLeft();
+    target.textContent = t(`${seconds} с`, `${seconds}s`);
+    if (seconds) countdown = setTimeout(paintCountdown, 250);
+  }
+
+  function applyState(state) {
+    game = state;
+    endTime = state.remainingMs == null ? undefined : performance.now() + state.remainingMs;
+    paintCountdown();
+  }
+
   function schedulePoll() {
     clearPoll();
     if (active && currentCode && !working && game?.phase !== 'finished') {
-      timer = setTimeout(refresh, document.hidden ? 7000 : 1600);
+      timer = setTimeout(refresh, document.hidden ? 5000 : inRound() ? 1000 : 1800);
     }
   }
 
@@ -194,13 +282,16 @@ export function createRoom(main, { auth, notify }) {
     try {
       const state = await cloud.rpc('room_state', { p_code: currentCode });
       if (version !== generation || working) return;
-      game = state;
+      applyState(state);
       issue = '';
       render();
     } catch (error) {
       if (version !== generation || working) return;
       issue = roomErrorMessage(error);
-      if (error.message === 'room_unavailable' || error.message === 'Sign in required') reset(false);
+      if (error.message === 'room_unavailable' || error.message === 'Sign in required') {
+        if (error.message === 'room_unavailable' && rememberedCode() === currentCode) save('room.' + cloud.identity(), null);
+        reset(false);
+      }
       render();
     } finally {
       polling = false;
@@ -212,7 +303,7 @@ export function createRoom(main, { auth, notify }) {
     const version = generation;
     const state = await cloud.rpc('room_state', { p_code: code });
     if (version !== generation) return;
-    game = state;
+    applyState(state);
     currentCode = code;
     const url = invitation(location.href, code);
     if (active) history.replaceState(null, '', url);
@@ -272,8 +363,13 @@ export function createRoom(main, { auth, notify }) {
       });
     } else if (cloud.account()) {
       operate(async () => {
-        const questions = makeQuiz(names, data.count, data.difficulty).map(question => ({
+        await cloud.rpc('resume_room');
+        const { studyDetails } = await import('./name-details.js');
+        const questions = makeQuiz(names, data.count, data.difficulty).map((question, index) => ({
           id: question.id, mode: question.mode, options: question.options,
+          ...(index === 0 && { language }),
+          hint: studyDetails[question.id].clue,
+          cards: Object.fromEntries(question.options.map(id => [id, catalogueCard(id)])),
           ...(question.mode === 'reverse' && { wording: byId.get(question.id).meaning })
         }));
         const code = await cloud.rpc('create_room', { p_questions: questions });
@@ -286,16 +382,28 @@ export function createRoom(main, { auth, notify }) {
     if (!active) return;
     const button = event.target.closest('button');
     if (!button) return;
-    if (button.dataset.roomAnswer && game && !game.host && !game.pick) {
+    if (button.dataset.roomAnswer && game?.phase === 'question' && !game.host) {
       const round = game.round;
+      const code = game.code;
+      const focus = button.dataset.roomAnswer;
+      if (game.pick === Number(focus)) return;
       return operate(async () => {
-        const choice = await cloud.rpc('answer', { p_code: game.code, p_round: round, p_choice: Number(button.dataset.roomAnswer) });
-        game = { ...game, pick: choice };
+        try {
+          await cloud.rpc('answer', { p_code: code, p_round: round, p_choice: Number(focus) });
+        } catch (error) {
+          if (error.message !== 'round_closed') throw error;
+        }
+        await open(code);
+      }).then(() => {
+        if (game?.phase === 'question' && game.round === round) main.querySelector(`[data-room-answer="${focus}"]`)?.focus({ preventScroll: true });
       });
     }
     switch (button.dataset.roomAction) {
       case 'resume':
         if (validCode(draftCode)) operate(() => open(draftCode));
+        break;
+      case 'resume-last':
+        if (validCode(rememberedCode())) operate(() => open(rememberedCode()));
         break;
       case 'copy':
         if (game) Promise.resolve().then(() => navigator.clipboard.writeText(invitation(location.href, game.code)))
@@ -323,28 +431,42 @@ export function createRoom(main, { auth, notify }) {
     }
   });
 
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && active && currentCode) refresh();
+  });
+
   return {
     render,
+    inRound,
     enter() {
       if (active) return;
       active = true;
       if (!cloud.enabled) return render();
       if (validCode(inviteCode())) draftCode = inviteCode();
       if (!game && cloud.identity()) {
-        const resume = validCode(draftCode) ? draftCode : read('room.' + cloud.identity(), '');
-        if (validCode(resume)) {
-          draftCode = resume;
-          operate(async () => {
-            try { await open(resume); }
-            catch (error) { if (error.message !== 'room_unavailable') throw error; }
-          });
-          return;
-        }
+        operate(async () => {
+          const resume = validCode(draftCode) ? draftCode : rememberedCode();
+          if (validCode(resume)) {
+            try { await open(resume); return; }
+            catch (error) {
+              if (error.message !== 'room_unavailable') throw error;
+              if (resume === rememberedCode()) save('room.' + cloud.identity(), null);
+              if (resume === inviteCode()) return;
+            }
+          }
+          try {
+            const latest = await cloud.rpc('resume_room', {});
+            if (validCode(latest) && latest !== resume) await open(latest);
+          } catch (error) {
+            if (!['room_unavailable', 'PGRST202'].includes(error.code || error.message)) throw error;
+          }
+        });
+        return;
       }
       render();
       schedulePoll();
     },
-    leave() { active = false; stamp = ''; clearPoll(); },
+    leave() { active = false; phase = ''; stamp = ''; clearPoll(); clearTimeout(countdown); },
     reset() { reset(false); }
   };
 }

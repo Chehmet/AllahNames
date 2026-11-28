@@ -28,7 +28,10 @@ let catalogGroup = '';
 let settings = read('settings', {});
 let practice = read('practice', {});
 let history = read('history', { completed: 0, correct: 0, total: 0 });
-let quiz;
+let quiz = read('solo-quiz', null);
+if (quiz) quiz.hints = new Set(quiz.hints);
+let quizPaused = Boolean(quiz);
+let studyDetails;
 let flash;
 
 const routes = ['home', 'quiz', 'cards', 'groups', 'catalog', 'favorites', 'room'];
@@ -89,12 +92,16 @@ function groupTile(id, navigation = false) {
 }
 
 function renderChrome() {
-  topbar.innerHTML = `<a class="brand" href="#home"><span class="seal" aria-hidden="true">✧</span>${t('Асма', 'Asma')}</a>
-    <nav class="nav" aria-label="${t('Разделы', 'Sections')}">${routes.slice(1).map(page =>
-      `<a href="${url(page)}" ${page === route ? 'aria-current="page"' : ''}>${label(page)}</a>`).join('')}</nav>
+  const focused = route === 'room' && roomView?.inRound()
+    || route === 'quiz' && quiz && !quizPaused && quiz.index < quiz.questions.length;
+  const brand = `<span class="seal" aria-hidden="true">✧</span>${t('Асма', 'Asma')}`;
+  topbar.innerHTML = `${focused ? `<span class="brand">${brand}</span>` : `<a class="brand" href="#home">${brand}</a>`}
+    ${focused ? '' : `<nav class="nav" aria-label="${t('Разделы', 'Sections')}">${routes.slice(1).map(page =>
+      `<a href="${url(page)}" ${page === route ? 'aria-current="page"' : ''}>${label(page)}</a>`).join('')}</nav>`}
     <div class="tools"><button type="button" class="locale theme-toggle" data-action="theme"></button>
     <button type="button" class="locale" data-action="language" aria-label="${t('Switch to English', 'Переключить на русский')}">${t('EN', 'RU')}</button>
-    ${btn(cloud.account() ? t('Профиль', 'Account') : t('Войти', 'Sign in'), 'auth', 'outline small')}</div>`;
+    ${focused ? '' : btn(cloud.account() ? t('Профиль', 'Account') : t('Войти', 'Sign in'), 'auth', 'outline small')}</div>`;
+  footer.hidden = Boolean(focused);
   footer.innerHTML = `<span>${t('Асма · Имена Аллаха', 'Asma · Names of Allah')}</span>${btn(t('Источники и перевод', 'Sources and translation'), 'sources', 'outline small')}`;
   document.title = t('Асма — имена Аллаха', 'Asma — Names of Allah');
   document.querySelector('.skip').textContent = t('К содержанию', 'Skip to content');
@@ -240,6 +247,10 @@ function meter(position, total) {
 
 function quizPage() {
   if (!quiz) return quizSetup();
+  if (quizPaused) return `<div class="narrow">${heading(label('quiz'))}<section class="card stack">
+    <p>${t('Сохранённый квиз', 'Saved quiz')} · ${quiz.index + 1}/${quiz.questions.length}</p>
+    <div class="actions">${btn(t('Продолжить квиз', 'Resume quiz'), 'resume-quiz', 'primary')}${btn(t('Начать новый квиз', 'Start a new quiz'), 'reset-quiz', 'outline')}</div>
+    </section></div>`;
   const { questions, index, picked, hints, answers } = quiz;
   if (index >= questions.length) {
     const correct = answers.filter(result => result.id === result.pick).length;
@@ -256,17 +267,18 @@ function quizPage() {
   const name = byId.get(question.id);
   const reverse = question.mode === 'reverse';
   const verses = picked ? noteVerses(name) : '';
-  const similar = related(name)[0];
-  const fragments = question.mode === 'name'
-    ? `${Array.from(name.meaning[language]).slice(0, 3).join('')}…`
+  const similar = related(name).find(other => question.options.includes(other.id)) || related(name)[0];
+  const glossWord = name.meaning[language].match(/[\p{L}-]{4,}/u)?.[0] || name.meaning[language];
+  const fragments = !reverse
+    ? `${Array.from(glossWord).slice(0, 3).join('')}…`
     : nameFragment(name, question.mode, language);
   const hintChoices = [
-    ['half', '50/50'], ['fragment', question.mode === 'name' ? t('Начало ответа', 'Answer fragment') : t('Часть имени', 'Name fragment')],
-    ['similar', t('Похожее имя', 'Related name')], ['cue', t('Ассоциация', 'Memory cue')]
+    ['half', '50/50'], ['fragment', reverse ? t('Часть имени', 'Name fragment') : t('Часть перевода', 'Meaning fragment')],
+    ['context', t('Контекст', 'Context')], ['similar', t('Сравнить с похожим именем', 'Compare with a related name')], ['cue', t('Ассоциация', 'Memory cue')]
   ];
   return `<div class="narrow">${heading(label('quiz'))}<section class="card stack">
     <div><div class="countline"><span>${t('Вопрос', 'Question')} ${index + 1}/${questions.length}</span>
-    ${btn(t('К настройкам', 'Quiz settings'), 'reset-quiz', 'outline small')}</div>${meter(index + Number(Boolean(picked)), questions.length)}</div>
+    ${btn(t('Выйти из квиза', 'Leave quiz'), 'pause-quiz', 'outline small')}</div>${meter(index + Number(Boolean(picked)), questions.length)}</div>
     <div class="quiz-prompt"><p class="eyebrow">${reverse ? t('Какое это имя?', 'Which name is it?') : t('Что означает имя?', 'What does the name mean?')}</p>
     ${reverse ? `<h2>${esc(name.meaning[language])}</h2>` : `${ar(name)}${question.mode === 'name' ? `<h2>${displayName(name)}</h2>${alternateName(name)}` : ''}`}</div>
     <div class="answer-grid">${question.options.map(id => {
@@ -286,8 +298,10 @@ function quizPage() {
         `<button type="button" class="button outline small" data-hint="${id}" aria-pressed="${hints.has(id)}" ${hints.has(id) ? 'disabled' : ''}>${text}</button>`).join('')}</div>
         ${hints.size ? `<div class="note" aria-live="polite">
           ${hints.has('half') ? `<p>${t('Два неверных варианта убраны.', 'Two incorrect choices removed.')}</p>` : ''}
-          ${hints.has('fragment') ? `<p>${t('Начало', 'Starts with')} · <bdi>${esc(fragments)}</bdi></p>` : ''}
-          ${hints.has('similar') ? `<p>${t('Похожее, но другое имя', 'A related but different name')} · ${displayName(similar)} · ${esc(similar.meaning[language])}</p>` : ''}
+          ${hints.has('fragment') ? `<p>${reverse ? t('Начало имени', 'Start of the name') : t('Одно из слов в переводе начинается так', 'One word in the translation starts like this')} · <bdi>${esc(fragments)}</bdi></p>` : ''}
+          ${hints.has('context') ? `<p>${esc(studyDetails?.[name.id]?.clue[language] || groups[name.group][language])}</p>` : ''}
+          ${hints.has('similar') ? `<p>${t('Сравни с другим именем', 'Compare with another name')} · ${displayName(similar)} — ${esc(similar.meaning[language])}.
+          ${question.options.includes(similar.id) ? t('Этот вариант можно исключить.', 'You can rule out this choice.') : t('Проверь, чем подходит другой оттенок значения.', 'Look for a different emphasis in the answer.')}</p>` : ''}
           ${hints.has('cue') ? `<p>${esc(name.cue[language])}</p>` : ''}
         </div>` : ''}`}</section></div>`;
 }
@@ -356,7 +370,8 @@ function showName(name) {
     <div><h3>${esc(name.meaning[language])}</h3>${secondary(name.meaning)}
     ${alternatives[language] ? `<p class="meaning-variants">${t('Также', 'Also')} · ${esc(alternatives[language])}</p>` : ''}
     ${alternatives[1 - language] ? secondary(alternatives) : ''}</div>
-    <div><p>${esc(name.note[language])}</p>${secondary(name.note)}</div>
+    <div><h3>${t('Кратко', 'In brief')}</h3><p>${esc(name.note[language])}</p>${secondary(name.note)}</div>
+    <section data-extended-name="${name.id}"></section>
     ${cueDisclosure(name)}
     <div class="actions">${favoriteButton(name)}</div>
     <div class="stack"><h3>${t('Источники', 'Sources')}</h3>
@@ -369,6 +384,29 @@ function showName(name) {
     <section><h3>${t('Похожие имена и отличия', 'Related names and differences')}</h3><div class="compare">
     <div class="note"><strong>${displayName(name)} · ${esc(name.meaning[language])}</strong>${secondary(name.meaning)}</div>
     ${related(name).map(other => compareRow(other)).join('')}</div></section></div>`);
+  loadStudyDetails().then(() => {
+    const section = dialogBody.querySelector(`[data-extended-name="${name.id}"]`);
+    const entry = studyDetails?.[name.id];
+    if (!section || !entry) return;
+    const primary = name.refs.map(sourceLink);
+    const passageLinks = [...new Set(entry.paragraphs.flatMap(paragraph => [...paragraph[0].matchAll(/\b\d{1,3}:\d{1,3}(?:–\d{1,3})?\b/g)].map(match => match[0])))]
+      .map(label => ({ label, url: 'https://quran.com/' + label.replace(':', '/').replace('–', '-') }));
+    const references = [...new Map([...primary, ...passageLinks, ...(entry.sources || [])].map(source => [source.url, source])).values()];
+    if (!name.refs.some(ref => /^[=h]/.test(ref))) references.push({ label: t('Ат-Тирмизи 3507', 'At-Tirmidhi 3507'), url: traditional });
+    section.innerHTML = `<details class="study-details"><summary>${t('Подробнее об имени', 'Read the detailed explanation')}</summary>
+      ${entry.paragraphs.map(paragraph => `<p>${esc(paragraph[language])}</p>`).join('')}
+      <div class="source-list">${references.map(source => sourceBadge(Array.isArray(source.label) ? source.label[language] : source.label, source.url)).join('')}</div>
+      <details><summary>${t('English', 'Русский')}</summary>
+      ${entry.paragraphs.map(paragraph => secondary(paragraph)).join('')}</details></details>`;
+  });
+}
+
+let detailsLoading;
+function loadStudyDetails() {
+  detailsLoading ||= import('./name-details.js').then(module => { studyDetails = module.studyDetails; }).catch(() => {
+    detailsLoading = undefined;
+  });
+  return detailsLoading;
 }
 
 function sources() {
@@ -471,7 +509,7 @@ function render() {
     else {
       main.innerHTML = heading(label('room'), t('Загрузка…', 'Loading…'));
       import('./rooms.js').then(module => {
-        roomView ||= module.createRoom(main, { auth, notify });
+        roomView ||= module.createRoom(main, { auth, notify, onPhaseChange: renderChrome });
         if (route === 'room') roomView.enter();
       }).catch(() => {
         if (route === 'room') main.innerHTML = heading(label('room'), t('Перезагрузи страницу, чтобы открыть игру.', 'Reload the page to open the live game.'));
@@ -487,6 +525,7 @@ function navigate(initial = false) {
   const invite = new URL(location.href).searchParams.has('room');
   const next = routes.includes(hash) ? hash : invite ? 'room' : 'home';
   if (next !== 'room') roomView?.leave();
+  if (route === 'quiz' && next !== 'quiz' && quiz && quiz.index < quiz.questions.length) quizPaused = true;
   route = next;
   renderChrome();
   render();
@@ -506,7 +545,9 @@ function advanceQuiz() {
     const correct = quiz.answers.filter(answer => answer.id === answer.pick).length;
     history = { completed: history.completed + 1, correct: history.correct + correct, total: history.total + quiz.answers.length };
     save('history', history);
+    renderChrome();
   }
+  saveSoloQuiz();
   render();
   main.querySelector('.quiz-prompt, .heading h1')?.setAttribute('tabindex', '-1');
   main.querySelector('.quiz-prompt, .heading h1')?.focus({ preventScroll: true });
@@ -514,8 +555,16 @@ function advanceQuiz() {
 
 function startQuiz(selected, count, difficulty) {
   quiz = { questions: makeQuiz(selected, count, difficulty), index: 0, picked: 0, hints: new Set(), answers: [] };
+  quizPaused = false;
+  saveSoloQuiz();
+  loadStudyDetails();
+  renderChrome();
   render();
   main.focus({ preventScroll: true });
+}
+
+function saveSoloQuiz() {
+  save('solo-quiz', quiz && quiz.index < quiz.questions.length ? { ...quiz, hints: [...quiz.hints] } : null);
 }
 
 function flashAction(action) {
@@ -578,6 +627,10 @@ document.addEventListener('click', event => {
   }
   if (route === 'quiz' && quiz && button.dataset.hint) {
     quiz.hints.add(button.dataset.hint);
+    saveSoloQuiz();
+    if (button.dataset.hint === 'context' && !studyDetails) loadStudyDetails().then(() => {
+      if (route === 'quiz' && !quizPaused && quiz?.hints.has('context')) render();
+    });
     render();
     main.querySelector('.note[aria-live]')?.setAttribute('tabindex', '-1');
     main.querySelector('.note[aria-live]')?.focus({ preventScroll: true });
@@ -586,6 +639,7 @@ document.addEventListener('click', event => {
   if (route === 'quiz' && quiz && button.dataset.answer && !quiz.picked) {
     quiz.picked = Number(button.dataset.answer);
     quiz.answers.push({ id: quiz.questions[quiz.index].id, pick: quiz.picked, hints: quiz.hints.size });
+    saveSoloQuiz();
     render();
     main.querySelector('[data-action="next-question"]')?.focus({ preventScroll: true });
     return;
@@ -617,7 +671,18 @@ document.addEventListener('click', event => {
       });
       break;
     case 'study-group': deal(group); location.hash = 'cards'; break;
-    case 'reset-quiz': quiz = undefined; render(); main.focus(); break;
+    case 'pause-quiz':
+      quizPaused = true;
+      location.hash = 'home';
+      break;
+    case 'resume-quiz':
+      quizPaused = false;
+      loadStudyDetails();
+      renderChrome();
+      render();
+      main.focus();
+      break;
+    case 'reset-quiz': quiz = undefined; quizPaused = false; saveSoloQuiz(); renderChrome(); render(); main.focus(); break;
     case 'next-question': advanceQuiz(); break;
     case 'review-errors':
       startQuiz(quiz.answers.filter(answer => answer.id !== answer.pick).map(answer => byId.get(answer.id)), 99, settings.difficulty);
@@ -686,6 +751,10 @@ main.addEventListener('change', event => {
 dialog.addEventListener('close', () => { detail = undefined; });
 dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
 window.addEventListener('hashchange', () => navigate());
+document.querySelector('.skip').addEventListener('click', event => {
+  event.preventDefault();
+  main.focus();
+});
 setLanguage(language);
 const callback = cloud.enabled && cloud.emailLink(location.href);
 if (callback) window.history.replaceState(null, '', callback.address);

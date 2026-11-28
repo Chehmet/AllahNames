@@ -12,7 +12,7 @@ const operations = {
   aq_sync_favorites: ['p_ids'], aq_favorite: ['p_name', 'p_saved'],
   aq_create_room: ['p_questions'], aq_join_room: ['p_code', 'p_nickname'],
   aq_advance_room: ['p_code', 'p_phase', 'p_round'], aq_answer: ['p_code', 'p_round', 'p_choice'],
-  aq_room_state: ['p_code'], aq_export_room: ['p_code']
+  aq_room_state: ['p_code'], aq_export_room: ['p_code'], aq_resume_room: []
 };
 
 async function login(email) {

@@ -6,11 +6,17 @@ import { due, makeQuiz, nameFragment, schedule, shuffle } from '../docs/quiz.js'
 import { matrix } from '../docs/qr.js';
 import { gameCSV, invitation, roomErrorMessage } from '../docs/rooms.js';
 import { verseExcerpt } from '../docs/verses.js';
+import { studyDetails } from '../docs/name-details.js';
 
 test('catalogue has 99 distinct names, complete bilingual cards and useful connections', () => {
   assert.equal(names.length, 99);
+  assert.equal(Object.keys(studyDetails).length, names.length);
   for (const key of ['id', 'ar', 'ru', 'latin']) assert.equal(new Set(names.map(name => name[key])).size, 99);
   for (const name of names) {
+    const study = studyDetails[name.id];
+    assert.ok(study.clue.every(text => text.length > 15));
+    assert.equal(study.paragraphs.length, 2);
+    assert.ok(study.paragraphs.flat().every(text => text.length > 70));
     assert.match(name.ar, /\p{Script=Arabic}/u);
     assert.match(name.ru, /\p{Script=Cyrillic}/u);
     assert.ok(groups[name.group]);
